@@ -86,6 +86,7 @@ class MoveGroup:
 
         # Execution tracking
         self._expected_exec_count = 0
+        self._plan_routed = False  # True when planner→executor has the trajectory
 
         # Dora node (single-threaded access only)
         self._node = Node()
@@ -362,6 +363,11 @@ class MoveGroup:
         self._target_pose = pose.copy()
         self._target_joints = None
 
+    def clear_pose_targets(self):
+        """Clear any previously set pose or joint targets."""
+        self._target_pose = None
+        self._target_joints = None
+
     def compute_ik(self, pose, seed=None, timeout=5.0):
         """Compute inverse kinematics without planning/executing.
 
@@ -405,6 +411,102 @@ class MoveGroup:
             joint_values = self.get_current_joint_values()
         return solver.forward_kinematics(np.asarray(joint_values))
 
+    # ==================== Cartesian path planning ==================== #
+
+    def compute_cartesian_path(self, waypoints, eef_step=0.01, jump_threshold=0.0):
+        """Plan a Cartesian path through a list of waypoints.
+
+        Linearly interpolates between the current EE pose and each waypoint
+        in Cartesian space, solving IK at each interpolated point.
+
+        Args:
+            waypoints: List of poses, each [x,y,z,r,p,y] (6D).
+            eef_step: Max distance (meters) between interpolated points.
+            jump_threshold: Reserved for ROS compatibility (unused).
+
+        Returns:
+            Tuple of (trajectory, fraction):
+                trajectory: List of joint configs (list of lists).
+                fraction: Float 0.0-1.0 indicating how much of the path succeeded.
+        """
+        from dora_moveit.ik_solver.advanced_ik_solver import (
+            ForwardKinematics, TracIKSolver, IKRequest,
+        )
+
+        config = self._config
+        fk = ForwardKinematics(config=config)
+        ik_solver = TracIKSolver(config=config)
+
+        if self._current_joints is None:
+            raise RuntimeError("No joint state received yet.")
+
+        # Start from current joint config
+        current_q = np.asarray(self._current_joints, dtype=float)
+        current_pos, current_rot = fk.compute_fk(current_q)
+
+        trajectory = [current_q.tolist()]
+        total_segments = len(waypoints)
+        completed_segments = 0
+
+        for wp in waypoints:
+            wp = np.asarray(wp, dtype=float)
+            target_pos = wp[:3]
+
+            # Interpolate linearly in Cartesian space
+            dist = np.linalg.norm(target_pos - current_pos)
+            n_steps = max(int(np.ceil(dist / eef_step)), 1)
+
+            segment_ok = True
+            for step in range(1, n_steps + 1):
+                alpha = step / n_steps
+                interp_pos = current_pos + alpha * (target_pos - current_pos)
+
+                # Solve IK using previous solution as seed
+                request = IKRequest(
+                    target_position=interp_pos,
+                    seed_joints=current_q.copy(),
+                )
+                result = ik_solver.solve(request)
+
+                if not result.success:
+                    print(f"[MoveGroup] Cartesian path IK failed at step {step}/{n_steps}, "
+                          f"error={result.error:.4f}")
+                    segment_ok = False
+                    break
+
+                current_q = result.joint_positions.copy()
+                trajectory.append(current_q.tolist())
+
+            if not segment_ok:
+                break
+
+            completed_segments += 1
+            current_pos = target_pos.copy()
+
+        fraction = completed_segments / total_segments if total_segments > 0 else 0.0
+        return trajectory, fraction
+
+    def _send_trajectory_to_executor(self, trajectory):
+        """Send a pre-computed joint trajectory directly to the executor.
+
+        Used by compute_cartesian_path results. Sends the trajectory as a
+        flat float32 array (same format as the planner output) on the
+        'cartesian_trajectory' output, which must be connected to the
+        trajectory executor's 'trajectory' input in the dataflow YAML.
+        """
+        if not trajectory:
+            return
+
+        traj_flat = np.array(trajectory, dtype=np.float32).flatten()
+        self._expected_exec_count += 1
+        self._exec_done = False
+        self._exec_success = False
+        self._node.send_output(
+            "cartesian_trajectory",
+            pa.array(traj_flat, type=pa.float32()),
+            {"num_waypoints": len(trajectory), "num_joints": self._num_joints},
+        )
+
     # ==================== Plan / Execute separately ==================== #
 
     def plan(self, joint_goal=None, timeout=10.0):
@@ -441,18 +543,21 @@ class MoveGroup:
 
         if self._plan_success and self._plan_trajectory:
             traj = [wp.tolist() for wp in self._plan_trajectory]
+            self._plan_routed = True  # executor already has it via dataflow
             return True, traj
         return False, []
 
     def execute(self, trajectory, wait=True, timeout=30.0):
-        """Wait for the currently executing trajectory to complete.
+        """Execute a trajectory.
 
-        In this dataflow architecture, the trajectory_executor receives
-        trajectories directly from the planner, so execution starts
-        automatically after plan(). This method just waits for completion.
+        For trajectories from plan(): executor already received it via
+        dataflow (planner→executor). This just waits for completion.
+
+        For trajectories from compute_cartesian_path(): sends trajectory
+        directly to executor via 'cartesian_trajectory' output.
 
         Args:
-            trajectory: The trajectory returned by plan() (used for validation only).
+            trajectory: The trajectory (list of joint configs).
             wait: If True, block until execution completes.
             timeout: Max seconds to wait.
 
@@ -462,10 +567,16 @@ class MoveGroup:
         if not trajectory:
             return False
 
-        # Execution was already started by the dataflow (planner → executor).
-        # exec count was already incremented by plan(). Just wait.
-        self._exec_done = False
-        self._exec_success = False
+        if not self._plan_routed:
+            # Trajectory not from planner (e.g. compute_cartesian_path)
+            # Send it directly to the executor
+            self._send_trajectory_to_executor(trajectory)
+        else:
+            # Trajectory came from plan() → already in executor
+            self._exec_done = False
+            self._exec_success = False
+
+        self._plan_routed = False
 
         if not wait:
             return True

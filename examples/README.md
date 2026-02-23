@@ -6,6 +6,7 @@ Example applications built with the [dora-moveit](../dora_moveit/) library.
 
 | Example | Robot | Description |
 |---------|-------|-------------|
+| [move_group_demo](move_group_demo/) | GEN72 7-DOF | ROS MoveIt-style API demo (named poses, joint goals, Cartesian paths, collision objects) |
 | [hunter_with_arm](hunter_with_arm/) | Hunter SE + GEN72 7-DOF | Mobile robot with arm for multi-view inspection |
 
 ## Creating a New Example

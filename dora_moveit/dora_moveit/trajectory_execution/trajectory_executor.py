@@ -135,7 +135,7 @@ def main():
         if event["type"] == "INPUT":
             input_id = event["id"]
 
-            if input_id == "trajectory":
+            if input_id in ("trajectory", "cartesian_trajectory"):
                 traj_flat = event["value"].to_numpy()
                 metadata = event.get("metadata", {})
                 num_waypoints = metadata.get("num_waypoints", len(traj_flat) // 7)

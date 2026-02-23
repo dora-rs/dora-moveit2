@@ -1,0 +1,105 @@
+# MoveGroup Example — ROS MoveIt-style API on dora-rs
+# =====================================================
+# Demonstrates: named poses, joint goals, Cartesian pose goals,
+#               Cartesian paths, and collision objects.
+#
+# Usage:
+#   cd examples/move_group_demo
+#   dora up
+#   dora start dataflows/moveit_example_mujoco.yml
+
+nodes:
+  # ===========================================
+  # MuJoCo Simulation (GEN72 standalone arm)
+  # ===========================================
+  - id: mujoco_sim
+    path: ../../../dora-mujoco/dora_mujoco/main.py
+    inputs:
+      tick: dora/timer/millis/10
+      control_input: trajectory_executor/joint_commands
+    outputs:
+      - joint_positions
+      - joint_velocities
+      - sensor_data
+    env:
+      MODEL_NAME: "/home/demo/Downloads/dora-moveit/examples/move_group_demo/models/GEN72_base.xml"
+      MUJOCO_GL: "glfw"
+
+  # ===========================================
+  # Planning Scene (library operator)
+  # ===========================================
+  - id: planning_scene
+    path: ../move_group_demo/nodes/planning_scene.py
+    inputs:
+      robot_state: mujoco_sim/joint_positions
+      scene_command: user_node/scene_command
+      tick: dora/timer/millis/5000
+    outputs:
+      - scene_update
+      - command_result
+    env:
+      ROBOT_CONFIG_MODULE: "move_group_demo.config.gen72"
+
+  # ===========================================
+  # OMPL Motion Planner (library operator)
+  # ===========================================
+  - id: planner
+    path: ../move_group_demo/nodes/planner.py
+    inputs:
+      plan_request: user_node/plan_request
+      scene_update: planning_scene/scene_update
+    outputs:
+      - trajectory
+      - plan_status
+    env:
+      ROBOT_CONFIG_MODULE: "move_group_demo.config.gen72"
+
+  # ===========================================
+  # IK Solver (library operator)
+  # ===========================================
+  - id: ik_solver
+    path: ../move_group_demo/nodes/ik_solver.py
+    inputs:
+      ik_request: user_node/ik_request
+    outputs:
+      - ik_solution
+      - ik_status
+    env:
+      ROBOT_CONFIG_MODULE: "move_group_demo.config.gen72"
+
+  # ===========================================
+  # Trajectory Executor (library operator)
+  # ===========================================
+  - id: trajectory_executor
+    path: ../move_group_demo/nodes/trajectory_executor.py
+    inputs:
+      trajectory: planner/trajectory
+      cartesian_trajectory: user_node/cartesian_trajectory
+      joint_positions: mujoco_sim/joint_positions
+      tick: dora/timer/millis/50
+    outputs:
+      - joint_commands
+      - execution_status
+    env:
+      ROBOT_CONFIG_MODULE: "move_group_demo.config.gen72"
+
+  # ===========================================
+  # MoveGroup Example (user application)
+  # ===========================================
+  - id: user_node
+    path: ../move_group_demo/nodes/moveit_example.py
+    env:
+      ROBOT_CONFIG_MODULE: "move_group_demo.config.gen72"
+    inputs:
+      joint_positions: mujoco_sim/joint_positions
+      plan_status: planner/plan_status
+      trajectory: planner/trajectory
+      execution_status: trajectory_executor/execution_status
+      ik_solution: ik_solver/ik_solution
+      ik_status: ik_solver/ik_status
+      command_result: planning_scene/command_result
+    outputs:
+      - plan_request
+      - ik_request
+      - scene_command
+      - cartesian_trajectory
