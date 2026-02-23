@@ -20,7 +20,13 @@ dora-moveit/                     # Repository root
 │   │   └── workflow/            # MoveGroup API + motion commander
 │   └── pyproject.toml
 ├── examples/
-│   └── hunter_with_arm/         # EXAMPLE APP (Hunter SE + GEN72)
+│   ├── move_group_demo/         # ROS MoveIt-style MoveGroup API example
+│   │   ├── move_group_demo/     # App Python package
+│   │   │   ├── config/gen72.py  # GEN72Config class
+│   │   │   └── nodes/           # moveit_example.py + library wrappers
+│   │   ├── models/              # GEN72 MuJoCo XML + meshes
+│   │   └── dataflows/           # moveit_example_mujoco.yml
+│   └── hunter_with_arm/         # Hunter SE + GEN72 multi-view capture
 │       ├── hunter_arm_demo/     # App Python package
 │       │   ├── config/gen72.py  # GEN72Config class
 │       │   ├── nodes/           # App operators + library wrappers
@@ -28,7 +34,7 @@ dora-moveit/                     # Repository root
 │       ├── models/              # MuJoCo XML, URDF, meshes
 │       └── dataflows/           # Dora dataflow YAMLs
 ├── dora-mujoco/                 # MuJoCo simulation package
-├── dora-moveit/                 # (legacy, being replaced by dora_moveit/)
+├── dora-moveit/                 # (legacy, preserved for git history)
 └── dora-control-lebai/          # LM3 robot (separate, future migration)
 ```
 
@@ -37,9 +43,16 @@ dora-moveit/                     # Repository root
 ```bash
 # Install library
 pip install -e dora_moveit/
-# Or: add dora_moveit/ and examples/hunter_with_arm/ to PYTHONPATH
 
-# Run example
+# Option A: ROS MoveIt-style example (recommended starting point)
+pip install -e examples/move_group_demo/
+cd examples/move_group_demo
+dora up
+dora start dataflows/moveit_example_mujoco.yml
+dora stop
+
+# Option B: Hunter SE mobile robot + arm example
+pip install -e examples/hunter_with_arm/
 cd examples/hunter_with_arm
 dora up
 dora start dataflows/movegroup_mujoco.yml   # MoveGroup API demo
@@ -66,19 +79,42 @@ The config class must satisfy the `RobotConfig` protocol (see `dora_moveit/confi
 
 ## MoveGroup API (High-Level)
 
+Supports all 5 core ROS MoveIt features (see `examples/move_group_demo/`):
+
 ```python
 from dora_moveit.workflow.move_group import MoveGroup
 
 group = MoveGroup("gen72")
+scene = group.get_planning_scene_interface()
+
+# 1. Named pose
 group.set_named_target("home")
 group.go(wait=True)
-group.go([-1.57, -0.5, 0.0, 0.0, 0.0, 0.5, 0.0], wait=True)
-success, traj = group.plan(joint_goal)
-group.execute(traj, wait=True)
+
+# 2. Joint-space goal
+group.go([1.57, -0.785, 0.0, -1.57, 0.0, 0.785, 0.0], wait=True)
+
+# 3. Cartesian pose goal (IK solved internally)
+group.set_pose_target([0.15, 0.1, 0.6, 0, 0, 0])
+group.go(wait=True)
+
+# 4. Cartesian path (straight line in workspace)
+waypoints = [[0.15, 0.1, 0.5, 0, 0, 0], [0.15, 0.2, 0.5, 0, 0, 0]]
+trajectory, fraction = group.compute_cartesian_path(waypoints, eef_step=0.01)
+group.execute(trajectory, wait=True)
+
+# 5. Collision objects
+scene.add_box("obstacle", [0.4, 0.0, 0.5], [0.1, 0.1, 0.5])
+group.set_named_target("home")
+group.go(wait=True)  # planner avoids the box
+scene.remove_world_object("obstacle")
+
 group.shutdown()
 ```
 
 Single-threaded polling design (all dora Node ops on one thread to avoid "Already borrowed" errors).
+
+Cartesian path uses `cartesian_trajectory` output in the dataflow YAML (connected to trajectory executor alongside planner's `trajectory` output).
 
 ## Library Operators
 
