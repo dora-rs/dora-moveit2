@@ -18,13 +18,22 @@ A reusable robot motion planning library for the [dora-rs](https://github.com/do
 pip install -e dora_moveit/
 
 # Install an example app
-pip install -e examples/hunter_with_arm/
+pip install -e examples/move_group_demo/
 
-# Run the MoveGroup demo (Hunter SE + GEN72 arm in MuJoCo)
-cd examples/hunter_with_arm
+# Run the ROS MoveIt-style example (GEN72 arm in MuJoCo)
+cd examples/move_group_demo
 dora up
-dora start dataflows/movegroup_mujoco.yml
+dora start dataflows/moveit_example_mujoco.yml
 ```
+
+## Examples
+
+| Example | Robot | Description |
+|---------|-------|-------------|
+| [move_group_demo](examples/move_group_demo/) | GEN72 7-DOF | ROS MoveIt-style API demo — named poses, joint goals, Cartesian paths, collision objects |
+| [hunter_with_arm](examples/hunter_with_arm/) | Hunter SE + GEN72 | Mobile robot with arm for multi-view inspection |
+
+See the [examples README](examples/README.md) for details and a guide to creating your own.
 
 ## Repository Structure
 
@@ -38,27 +47,42 @@ dora_moveit/           # Library package (pip install -e dora_moveit/)
     collision_detection/   # Collision checking
     workflow/          # MoveGroup API + motion commander
 examples/              # Example applications
+  move_group_demo/     # ROS MoveIt-style MoveGroup API example
   hunter_with_arm/     # Hunter SE mobile robot + GEN72 7-DOF arm
 dora-mujoco/           # MuJoCo simulation node
 ```
 
 ## Usage
 
-### MoveGroup API
+### MoveGroup API (ROS MoveIt equivalent)
 
 ```python
 from dora_moveit.workflow.move_group import MoveGroup
 
 group = MoveGroup("gen72")
+scene = group.get_planning_scene_interface()
+
+# 1. Named pose
 group.set_named_target("home")
 group.go(wait=True)
 
-# Move to joint goal
-group.go([-1.57, -0.5, 0.0, 0.0, 0.0, 0.5, 0.0], wait=True)
+# 2. Joint-space goal
+group.go([1.57, -0.785, 0.0, -1.57, 0.0, 0.785, 0.0], wait=True)
 
-# Plan then execute
-success, trajectory = group.plan(joint_goal)
+# 3. Cartesian pose goal (IK solved internally)
+group.set_pose_target([0.15, 0.1, 0.6, 0, 0, 0])
+group.go(wait=True)
+
+# 4. Cartesian path (straight line in workspace)
+waypoints = [[0.15, 0.1, 0.5, 0, 0, 0], [0.15, 0.2, 0.5, 0, 0, 0]]
+trajectory, fraction = group.compute_cartesian_path(waypoints, eef_step=0.01)
 group.execute(trajectory, wait=True)
+
+# 5. Collision objects
+scene.add_box("obstacle", [0.4, 0.0, 0.5], [0.1, 0.1, 0.5])
+group.set_named_target("home")
+group.go(wait=True)  # planner avoids the box
+scene.remove_world_object("obstacle")
 
 group.shutdown()
 ```
