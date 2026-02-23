@@ -1,0 +1,99 @@
+# Hunter SE with GEN72 Arm - MuJoCo Simulation
+# ==========================================================
+# Uses dora-moveit library operators with GEN72 robot config
+#
+# Usage:
+#   cd examples/hunter_with_arm
+#   dora start dataflows/hunter_arm_mujoco.yml
+
+nodes:
+  # ===========================================
+  # MuJoCo Simulation
+  # ===========================================
+  - id: mujoco_sim
+    path: ../../../dora-mujoco/dora_mujoco/main.py
+    inputs:
+      tick: dora/timer/millis/10
+      wheel_control: vehicle_controller/wheel_commands
+      control_input: trajectory_executor/joint_commands
+    outputs:
+      - joint_positions
+      - joint_velocities
+      - sensor_data
+    env:
+      MODEL_NAME: "../models/hunter_se_with_arm_and_pipes.xml"
+      MUJOCO_GL: "glfw"
+
+  # ===========================================
+  # Vehicle Controller (app-specific)
+  # ===========================================
+  - id: vehicle_controller
+    path: ../hunter_arm_demo/nodes/vehicle_controller.py
+    inputs:
+      joint_positions: mujoco_sim/joint_positions
+    outputs:
+      - wheel_commands
+      - movement_complete
+
+  # ===========================================
+  # Planning Scene (library operator)
+  # ===========================================
+  - id: planning_scene
+    path: ../hunter_arm_demo/nodes/planning_scene.py
+    inputs:
+      robot_state: mujoco_sim/joint_positions
+      scene_command: capture/scene_command
+      tick: dora/timer/millis/5000
+    outputs:
+      - scene_update
+      - command_result
+    env:
+      ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
+
+  # ===========================================
+  # OMPL Motion Planner (library operator)
+  # ===========================================
+  - id: planner
+    path: ../hunter_arm_demo/nodes/planner.py
+    inputs:
+      plan_request: capture/plan_request
+      scene_update: planning_scene/scene_update
+    outputs:
+      - trajectory
+      - plan_status
+    env:
+      ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
+
+  # ===========================================
+  # Trajectory Executor (library operator)
+  # ===========================================
+  - id: trajectory_executor
+    path: ../hunter_arm_demo/nodes/trajectory_executor.py
+    inputs:
+      trajectory: planner/trajectory
+      joint_positions: mujoco_sim/joint_positions
+      tick: dora/timer/millis/50
+    outputs:
+      - joint_commands
+      - execution_status
+    env:
+      ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
+
+  # ===========================================
+  # Multi-View Capture (app-specific)
+  # ===========================================
+  - id: capture
+    path: ../hunter_arm_demo/nodes/multi_view_capture_node.py
+    env:
+      capture_output_dir: "../result_captures"
+
+    inputs:
+      joint_positions: mujoco_sim/joint_positions
+      execution_status: trajectory_executor/execution_status
+      trajectory: planner/trajectory
+      plan_status: planner/plan_status
+      vehicle_ready: vehicle_controller/movement_complete
+    outputs:
+      - robot_state
+      - plan_request
+      - scene_command

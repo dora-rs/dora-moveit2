@@ -1,0 +1,30 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.so
+*.dll
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output
+out/
+result_captures/
+
+# Old sub-repo (preserved for history reference)
+dora-moveit/
+
+# Not part of this project
+dora-control-lebai/
+lebai/
+hunter_se.zip

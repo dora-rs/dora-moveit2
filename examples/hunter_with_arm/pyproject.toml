@@ -1,0 +1,19 @@
+[project]
+name = "hunter-arm-demo"
+version = "0.1.0"
+description = "Hunter SE + GEN72 arm demo using dora-moveit"
+requires-python = ">=3.9"
+
+dependencies = [
+    "dora-moveit",
+    "numpy >= 1.20.0",
+    "pyarrow >= 10.0.0",
+]
+
+[build-system]
+requires = ["setuptools >= 64.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["hunter_arm_demo*"]

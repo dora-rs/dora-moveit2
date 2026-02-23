@@ -1,0 +1,97 @@
+# GEN72 Real Robot Multi-View Capture
+# ====================================
+# Uses physical GEN72 robot instead of MuJoCo simulation
+#
+# Usage:
+#   cd examples/hunter_with_arm
+#   dora start dataflows/gen72_real.yml
+
+nodes:
+  # ===========================================
+  # GEN72 Real Robot Control
+  # ===========================================
+  - id: gen72_robot
+    path: ../hunter_arm_demo/robot_control/gen72_robot_node.py
+    inputs:
+      tick: dora/timer/millis/200
+      control_input: trajectory_executor/joint_commands
+    outputs:
+      - joint_positions
+      - joint_velocities
+
+  # ===========================================
+  # Planning Scene (library operator)
+  # ===========================================
+  - id: planning_scene
+    path: ../hunter_arm_demo/nodes/planning_scene.py
+    inputs:
+      robot_state: gen72_robot/joint_positions
+      scene_command: capture/scene_command
+      tick: dora/timer/millis/20000
+    outputs:
+      - scene_update
+      - command_result
+    env:
+      ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
+
+  # ===========================================
+  # OMPL Motion Planner (library operator)
+  # ===========================================
+  - id: planner
+    path: ../hunter_arm_demo/nodes/planner.py
+    inputs:
+      plan_request: capture/plan_request
+      scene_update: planning_scene/scene_update
+    outputs:
+      - trajectory
+      - plan_status
+    env:
+      ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
+
+  # ===========================================
+  # IK Solver (library operator)
+  # ===========================================
+  - id: ik_solver
+    path: ../hunter_arm_demo/nodes/ik_solver.py
+    inputs:
+      ik_request: capture/ik_request
+    outputs:
+      - ik_solution
+      - ik_status
+    env:
+      ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
+
+  # ===========================================
+  # Trajectory Executor (library operator)
+  # ===========================================
+  - id: trajectory_executor
+    path: ../hunter_arm_demo/nodes/trajectory_executor.py
+    inputs:
+      trajectory: planner/trajectory
+      joint_positions: gen72_robot/joint_positions
+      tick: dora/timer/millis/200
+    outputs:
+      - joint_commands
+      - execution_status
+    env:
+      ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
+
+  # ===========================================
+  # Multi-View Capture (app-specific)
+  # ===========================================
+  - id: capture
+    path: ../hunter_arm_demo/nodes/multi_view_capture_node.py
+    env:
+      CAPTURE_OUTPUT_DIR: "../result_captures"
+    inputs:
+      joint_positions: gen72_robot/joint_positions
+      execution_status: trajectory_executor/execution_status
+      trajectory: planner/trajectory
+      plan_status: planner/plan_status
+      ik_solution: ik_solver/ik_solution
+      ik_status: ik_solver/ik_status
+    outputs:
+      - robot_state
+      - plan_request
+      - ik_request
+      - scene_command
