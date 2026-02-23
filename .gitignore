@@ -8,6 +8,9 @@ build/
 .eggs/
 *.so
 *.dll
+*.backup
+*.bak
+*.log
 
 # IDE
 .vscode/
