@@ -33,7 +33,6 @@ dora start dataflows/ur5e_example_mujoco.yml
 | Example | Robot | Description |
 |---------|-------|-------------|
 | [move_group_demo](examples/move_group_demo/) | UR5e 6-DOF + Robotiq 2F-85 | Pick-and-place demo with MoveGroup API — named poses, joint goals, Cartesian paths, collision objects |
-| [move_group_demo](examples/move_group_demo/) | GEN72 7-DOF | ROS MoveIt-style API demo (alternate config) |
 | [hunter_with_arm](examples/hunter_with_arm/) | Hunter SE + GEN72 | Mobile robot with arm for multi-view inspection |
 
 See the [examples README](examples/README.md) for details and a guide to creating your own.
