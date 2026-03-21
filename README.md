@@ -2,7 +2,7 @@
 
 A reusable robot motion planning library for the [dora-rs](https://github.com/dora-rs/dora) dataflow framework. Provides MoveIt-style IK solving, collision-aware OMPL planning, trajectory execution, and a high-level MoveGroup API — for any robot arm.
 
-![UR5e + Robotiq 2F-85 Pick-and-Place Demo](images/ur5e_pick_place.gif)
+![UR5e + Robotiq 2F-85 Pick-and-Place Demo](images/ur5e_pick_place.png)
 
 ## Features
 
