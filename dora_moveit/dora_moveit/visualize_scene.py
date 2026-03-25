@@ -11,13 +11,11 @@ import mujoco.viewer
 # Create MuJoCo XML model
 xml = """
 <mujoco model="gen72_scene">
-  <option gravity="0 0 -9.81"/>
+  <option timestep="0.002" integrator="RK4" gravity="0 0 -9.81"/>
 
   <worldbody>
     <!-- Ground plane -->
-    <body name="ground" pos="0 0 -0.2">
-      <geom type="box" size="1 1 0.01" rgba="0.3 0.3 0.3 1"/>
-    </body>
+    <geom name="ground" type="box" pos="0 0 -0.2" size="1 1 0.01" rgba="0.3 0.3 0.3 1"/>
 
     <!-- Table -->
     <body name="table" pos="0.6 0 0.3">
@@ -106,5 +104,4 @@ print("Press ESC to close")
 # Launch viewer
 with mujoco.viewer.launch_passive(model, data) as viewer:
     while viewer.is_running():
-        mujoco.mj_step(model, data)
-        viewer.sync()
+      viewer.sync()
