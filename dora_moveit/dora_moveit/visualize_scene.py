@@ -11,7 +11,7 @@ import mujoco.viewer
 # Create MuJoCo XML model
 xml = """
 <mujoco model="gen72_scene">
-  <option gravity="0 0 -9.81"/>
+  <option timestep="0.002" integrator="RK4" gravity="0 0 -9.81"/>
 
   <worldbody>
     <!-- Ground plane -->
@@ -104,5 +104,4 @@ print("Press ESC to close")
 # Launch viewer
 with mujoco.viewer.launch_passive(model, data) as viewer:
     while viewer.is_running():
-        mujoco.mj_step(model, data)
-        viewer.sync()
+      viewer.sync()
