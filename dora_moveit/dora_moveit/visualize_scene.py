@@ -15,9 +15,7 @@ xml = """
 
   <worldbody>
     <!-- Ground plane -->
-    <body name="ground" pos="0 0 -0.2">
-      <geom type="box" size="1 1 0.01" rgba="0.3 0.3 0.3 1"/>
-    </body>
+    <geom name="ground" type="box" pos="0 0 -0.2" size="1 1 0.01" rgba="0.3 0.3 0.3 1"/>
 
     <!-- Table -->
     <body name="table" pos="0.6 0 0.3">
