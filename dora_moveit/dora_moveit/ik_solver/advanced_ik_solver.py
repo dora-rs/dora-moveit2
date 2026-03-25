@@ -39,56 +39,78 @@ class IKResult:
 
 class ForwardKinematics:
     """
-    Forward kinematics for GEN72 robot using DH parameters.
+    Forward kinematics using link transforms from robot config.
+    Supports per-joint rotation axes (Z, Y, or X).
     """
 
     def __init__(self, config=None):
         if config is None:
             config = load_config()
         self.link_transforms = config.LINK_TRANSFORMS
+        self.num_joints = config.NUM_JOINTS
+        self.ee_offset = getattr(config, 'EE_OFFSET', None)
+
+    @staticmethod
+    def _rot_z(angle):
+        c, s = np.cos(angle), np.sin(angle)
+        return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+
+    @staticmethod
+    def _rot_y(angle):
+        c, s = np.cos(angle), np.sin(angle)
+        return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
+
+    @staticmethod
+    def _rot_x(angle):
+        c, s = np.cos(angle), np.sin(angle)
+        return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
+
+    def _rot_axis(self, angle, axis):
+        """Rotate about the given axis [x, y, z]."""
+        if axis[2] != 0:
+            return self._rot_z(angle)
+        elif axis[1] != 0:
+            return self._rot_y(angle)
+        else:
+            return self._rot_x(angle)
 
     def compute_fk(self, joint_positions: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         Compute forward kinematics.
 
         Args:
-            joint_positions: Joint angles [7]
+            joint_positions: Joint angles
 
         Returns:
             Tuple of (position [3], rotation_matrix [3x3])
         """
         q = joint_positions
 
-        def rot_z(angle):
-            c, s = np.cos(angle), np.sin(angle)
-            return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
-
-        def rot_y(angle):
-            c, s = np.cos(angle), np.sin(angle)
-            return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
-
-        def rot_x(angle):
-            c, s = np.cos(angle), np.sin(angle)
-            return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
-
         T = np.eye(4)
 
         for i, (joint_angle, link_tf) in enumerate(zip(q, self.link_transforms)):
             xyz = np.array(link_tf["xyz"])
             rpy = link_tf["rpy"]
+            axis = link_tf.get("axis", [0, 0, 1])
 
-            # Build rotation from RPY
-            R_link = rot_z(rpy[2]) @ rot_y(rpy[1]) @ rot_x(rpy[0])
+            # Build rotation from RPY (Z-Y-X convention)
+            R_link = self._rot_z(rpy[2]) @ self._rot_y(rpy[1]) @ self._rot_x(rpy[0])
             T_link = np.eye(4)
             T_link[:3, :3] = R_link
             T_link[:3, 3] = xyz
 
             T = T @ T_link
 
-            # Apply joint rotation (all joints rotate around Z-axis)
+            # Apply joint rotation about the specified axis
             T_joint = np.eye(4)
-            T_joint[:3, :3] = rot_z(joint_angle)
+            T_joint[:3, :3] = self._rot_axis(joint_angle, axis)
             T = T @ T_joint
+
+        # Apply EE offset if defined
+        if self.ee_offset is not None:
+            T_ee = np.eye(4)
+            T_ee[:3, 3] = self.ee_offset
+            T = T @ T_ee
 
         position = T[:3, 3]
         rotation = T[:3, :3]
@@ -105,12 +127,13 @@ class ForwardKinematics:
         Returns:
             Jacobian matrix [6 x 7] (position + orientation)
         """
-        jacobian = np.zeros((6, 7))
+        n = self.num_joints
+        jacobian = np.zeros((6, n))
         delta = 1e-6
 
         pos0, rot0 = self.compute_fk(joint_positions)
 
-        for i in range(7):
+        for i in range(n):
             q_delta = joint_positions.copy()
             q_delta[i] += delta
 
@@ -211,7 +234,7 @@ class TracIKSolver:
         damping = 0.01
 
         for iteration in range(self.max_iterations):
-            q = np.asarray(q).flatten()[:7]
+            q = np.asarray(q).flatten()[:len(self.joint_limits_lower)]
 
             current_pos, _ = self.fk.compute_fk(q)
             pos_error = target_pos - current_pos

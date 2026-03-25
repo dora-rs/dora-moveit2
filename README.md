@@ -2,7 +2,7 @@
 
 A reusable robot motion planning library for the [dora-rs](https://github.com/dora-rs/dora) dataflow framework. Provides MoveIt-style IK solving, collision-aware OMPL planning, trajectory execution, and a high-level MoveGroup API — for any robot arm.
 
-![Hunter SE + GEN72 Arm in MuJoCo](images/hunter_arm.png)
+![UR5e + Robotiq 2F-85 Pick-and-Place Demo](images/ur5e_pick_place.png)
 
 ## Features
 
@@ -22,17 +22,17 @@ pip install -e dora_moveit/
 # Install an example app
 pip install -e examples/move_group_demo/
 
-# Run the ROS MoveIt-style example (GEN72 arm in MuJoCo)
+# Run the UR5e pick-and-place example
 cd examples/move_group_demo
 dora up
-dora start dataflows/moveit_example_mujoco.yml
+dora start dataflows/ur5e_example_mujoco.yml
 ```
 
 ## Examples
 
 | Example | Robot | Description |
 |---------|-------|-------------|
-| [move_group_demo](examples/move_group_demo/) | GEN72 7-DOF | ROS MoveIt-style API demo — named poses, joint goals, Cartesian paths, collision objects |
+| [move_group_demo](examples/move_group_demo/) | UR5e 6-DOF + Robotiq 2F-85 | Pick-and-place demo with MoveGroup API — named poses, joint goals, Cartesian paths, collision objects |
 | [hunter_with_arm](examples/hunter_with_arm/) | Hunter SE + GEN72 | Mobile robot with arm for multi-view inspection |
 
 See the [examples README](examples/README.md) for details and a guide to creating your own.
@@ -61,27 +61,27 @@ dora-mujoco/           # MuJoCo simulation node
 ```python
 from dora_moveit.workflow.move_group import MoveGroup
 
-group = MoveGroup("gen72")
+group = MoveGroup("ur5e")
 scene = group.get_planning_scene_interface()
 
 # 1. Named pose
 group.set_named_target("home")
 group.go(wait=True)
 
-# 2. Joint-space goal
-group.go([1.57, -0.785, 0.0, -1.57, 0.0, 0.785, 0.0], wait=True)
+# 2. Joint-space goal (6-DOF for UR5e)
+group.go([1.57, -0.785, 1.57, -1.57, -1.57, 0.0], wait=True)
 
 # 3. Cartesian pose goal (IK solved internally)
-group.set_pose_target([0.15, 0.1, 0.6, 0, 0, 0])
+group.set_pose_target([0.35, -0.25, 0.20, 0, 0, 0])
 group.go(wait=True)
 
 # 4. Cartesian path (straight line in workspace)
-waypoints = [[0.15, 0.1, 0.5, 0, 0, 0], [0.15, 0.2, 0.5, 0, 0, 0]]
+waypoints = [[0.35, -0.25, 0.20, 0, 0, 0], [0.35, 0.25, 0.20, 0, 0, 0]]
 trajectory, fraction = group.compute_cartesian_path(waypoints, eef_step=0.01)
 group.execute(trajectory, wait=True)
 
 # 5. Collision objects
-scene.add_box("obstacle", [0.4, 0.0, 0.5], [0.1, 0.1, 0.5])
+scene.add_box("obstacle", [0.4, 0.0, 0.3], [0.1, 0.1, 0.3])
 group.set_named_target("home")
 group.go(wait=True)  # planner avoids the box
 scene.remove_world_object("obstacle")
@@ -98,10 +98,10 @@ Library operators are robot-agnostic. Define a config class for your robot:
 import numpy as np
 
 class MyRobotConfig:
-    NUM_JOINTS = 6
+    NUM_JOINTS = 6  # or 7 for 7-DOF arms
     JOINT_LOWER_LIMITS = np.array([...])
     JOINT_UPPER_LIMITS = np.array([...])
-    LINK_TRANSFORMS = [...]
+    LINK_TRANSFORMS = [...]  # per-joint axis, xyz, rpy
     COLLISION_GEOMETRY = [...]
     HOME_CONFIG = np.array([...])
     SAFE_CONFIG = np.array([...])
@@ -127,9 +127,9 @@ See [`dora_moveit/dora_moveit/config.py`](dora_moveit/dora_moveit/config.py) for
 - [dora-rs](https://github.com/dora-rs/dora) CLI installed (`cargo install dora-cli` or download a release binary)
 - A display server (X11/Wayland) for the MuJoCo viewer
 
-### 1. MoveGroup Demo (GEN72 Standalone Arm)
+### 1. UR5e Pick-and-Place Demo
 
-The simplest starting point — a single GEN72 7-DOF arm demonstrating all 5 MoveGroup features: named poses, joint goals, Cartesian pose goals, Cartesian paths, and collision objects.
+The primary demo — a UR5e 6-DOF arm with Robotiq 2F-85 gripper performing pick-and-place of a red ball. Uses official MuJoCo Menagerie meshes.
 
 ```bash
 # 1. Install packages
@@ -140,15 +140,22 @@ pip install -e examples/move_group_demo/
 # 2. Launch
 cd examples/move_group_demo
 dora up
-dora start dataflows/moveit_example_mujoco.yml
+dora start dataflows/ur5e_example_mujoco.yml
 
 # 3. Stop when done
 dora stop
 ```
 
+**Standalone pick-and-place visualization** (no dora required):
+
+```bash
+cd examples/move_group_demo/models
+mjpython pick_and_place_demo.py
+```
+
 **Dataflow nodes:** `mujoco_sim` → `planning_scene` → `planner` → `ik_solver` → `trajectory_executor` → `user_node`
 
-The `user_node` runs through all 5 demos automatically and then idles. The MuJoCo viewer window shows the arm moving in real time.
+The `user_node` runs through all 5 MoveGroup demos automatically. The MuJoCo viewer shows the UR5e arm moving in real time.
 
 **Troubleshooting:**
 - If nodes fail with `ModuleNotFoundError`, ensure all three packages are installed in the same Python environment that dora uses. You can set `PYTHONPATH` in each node's `env:` block in the dataflow YAML to point to your site-packages directory.

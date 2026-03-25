@@ -122,12 +122,12 @@ def main():
     print("=== Dora-MoveIt Trajectory Executor ===")
 
     node = Node()
-    executor = TrajectoryExecutor(num_joints=7)
-
     config = load_config()
+    executor = TrajectoryExecutor(num_joints=config.NUM_JOINTS)
+
     executor.current_joints = config.SAFE_CONFIG.copy()
     executor.last_command = config.SAFE_CONFIG.copy()
-    print(f"Initialized with safe config: {executor.current_joints[:6]}...")
+    print(f"Initialized with {config.NUM_JOINTS}-DOF safe config: {executor.current_joints}...")
 
     first_tick = True
 
@@ -138,8 +138,8 @@ def main():
             if input_id in ("trajectory", "cartesian_trajectory"):
                 traj_flat = event["value"].to_numpy()
                 metadata = event.get("metadata", {})
-                num_waypoints = metadata.get("num_waypoints", len(traj_flat) // 7)
-                num_joints = metadata.get("num_joints", 7)
+                num_waypoints = metadata.get("num_waypoints", len(traj_flat) // executor.num_joints)
+                num_joints = metadata.get("num_joints", executor.num_joints)
 
                 trajectory = traj_flat.reshape(num_waypoints, num_joints)
                 trajectory_list = [trajectory[i] for i in range(num_waypoints)]

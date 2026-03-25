@@ -45,11 +45,11 @@ def _decode_json(value) -> dict:
     return json.loads(raw.decode("utf-8"))
 
 
-def _extract_arm_joints(joints: np.ndarray, num_joints: int = 7) -> np.ndarray:
+def _extract_arm_joints(joints: np.ndarray, num_joints: int = 6) -> np.ndarray:
     """Extract arm joint positions from full qpos array.
-    Handles hunter model (20 qpos, arm at 13:20) and standalone (7-9 qpos)."""
+    Handles hunter model (20+ qpos, arm at 13:13+n) and standalone arm (+gripper)."""
     if len(joints) >= 20:
-        return joints[13:20].copy()
+        return joints[13:13 + num_joints].copy()
     return joints[:num_joints].copy()
 
 
