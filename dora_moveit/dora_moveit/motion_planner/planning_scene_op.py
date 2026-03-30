@@ -393,6 +393,7 @@ def main():
     print("=== Dora-MoveIt Planning Scene Operator ===")
     
     node = Node()
+    config = load_config()
     scene_op = PlanningSceneOperator()
     
     # Broadcast initial scene

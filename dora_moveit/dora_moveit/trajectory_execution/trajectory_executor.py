@@ -56,7 +56,7 @@ class TrajectoryExecutor:
         """Update current joint positions from MuJoCo"""
         # For hunter model: skip freejoint(7) + steering(2) + wheels(4) = 13
         if len(joints) >= 20:
-            self.current_joints = joints[13:20].copy()
+            self.current_joints = joints[13:13 + self.num_joints].copy()
         else:
             self.current_joints = joints[:self.num_joints].copy()
 
