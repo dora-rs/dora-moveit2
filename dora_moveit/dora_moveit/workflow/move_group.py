@@ -45,10 +45,13 @@ def _decode_json(value) -> dict:
     return json.loads(raw.decode("utf-8"))
 
 
-def _extract_arm_joints(joints: np.ndarray, num_joints: int = 6) -> np.ndarray:
-    """Extract arm joint positions from full qpos array.
-    Handles hunter model (20+ qpos, arm at 13:13+n) and standalone arm (+gripper)."""
+def _extract_arm_joints(joints: np.ndarray, num_joints: int = 6,
+                        arm_qpos_start: int = 0) -> np.ndarray:
+    """Extract arm joint positions from full qpos array."""
+    if arm_qpos_start > 0:
+        return joints[arm_qpos_start:arm_qpos_start + num_joints].copy()
     if len(joints) >= 20:
+        # Legacy: Hunter model — arm at qpos[13:13+n]
         return joints[13:13 + num_joints].copy()
     return joints[:num_joints].copy()
 
@@ -69,6 +72,7 @@ class MoveGroup:
         self._group_name = group_name
         self._config = load_config()
         self._num_joints = self._config.NUM_JOINTS
+        self._arm_qpos_start = getattr(self._config, "ARM_QPOS_START", 0)
 
         # Planner settings
         self._planner_id = "rrt_connect"
@@ -154,7 +158,7 @@ class MoveGroup:
 
     def _handle_joint_positions(self, event):
         joints = event["value"].to_numpy()
-        self._current_joints = _extract_arm_joints(joints, self._num_joints)
+        self._current_joints = _extract_arm_joints(joints, self._num_joints, self._arm_qpos_start)
 
     # Plan/trajectory/execution state for current operation
     _plan_done = False

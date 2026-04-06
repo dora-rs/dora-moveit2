@@ -409,8 +409,12 @@ def main():
                 # Update robot state
                 try:
                     joints = event["value"].to_numpy()
-                    # Extract arm joints: skip freejoint (7) + wheels (6) = 13
-                    if len(joints) >= 20:
+                    # Extract arm joints from full qpos array
+                    arm_start = getattr(config, "ARM_QPOS_START", 0)
+                    if arm_start > 0:
+                        arm_joints = joints[arm_start:arm_start + config.NUM_JOINTS]
+                    elif len(joints) >= 20:
+                        # Legacy: Hunter model — skip freejoint(7) + wheels(6) = 13
                         arm_joints = joints[13:13 + config.NUM_JOINTS]
                     else:
                         arm_joints = joints[:config.NUM_JOINTS]

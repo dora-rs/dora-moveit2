@@ -31,6 +31,7 @@ class NanoConfig:
     """ADORA1 Nano SO_ARM100 6-DOF Arm Configuration"""
 
     NUM_JOINTS = 6
+    ARM_QPOS_START = 3  # arm joints start at qpos[3] (after 3 wheel joints)
 
     JOINT_CONFIGS = [
         JointConfig("base_rotation", -2.618, 2.618, 5.0, 3.0),

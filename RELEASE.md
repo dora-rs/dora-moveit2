@@ -1,5 +1,22 @@
 # Release Notes
 
+## v0.3.5 — Nano Full Robot Model (Mobile Base + Arm)
+
+### New Features
+- **Full ADORA1 Nano MJCF model** (`nano_full.xml`): Complete 3-wheel omnidirectional mobile base + SO_ARM100 6-DOF arm with all 42 mesh geometries, auto-converted from ground-truth URDF
+- **URDF→MJCF conversion script** (`scripts/convert_urdf_to_mjcf.py`): Automated pipeline using MuJoCo's URDF compiler with mesh decimation for oversized STLs and post-processing for actuators/scene setup
+- **`ARM_QPOS_START` config field**: Robot configs can now specify where arm joints start in the qpos array, supporting robots with mobile bases (wheels before arm joints)
+
+### Library Changes
+- `trajectory_executor.py`: Uses `ARM_QPOS_START` from config for arm joint extraction (backward-compatible with Hunter model)
+- `planning_scene_op.py`: Same `ARM_QPOS_START` support for robot state updates
+- `move_group.py`: `_extract_arm_joints()` accepts `arm_qpos_start` parameter
+
+### Model Details
+- 45 STL meshes (3 omni wheels decimated from 314K→199K faces for MuJoCo's 200K limit)
+- 3 passive wheel joints (continuous, no actuators) + 6 arm revolute joints (position actuators)
+- qpos layout: wheels[0:3], arm[3:9], target_freejoint[9:16]
+
 ## v0.3.0 — Nano Pick-and-Place + Arbitrary Axis Support
 
 ### New Features

@@ -18,8 +18,9 @@ from dora_moveit.config import load_config
 class TrajectoryExecutor:
     """Executes motion trajectories on the robot"""
 
-    def __init__(self, num_joints: int = 7):
+    def __init__(self, num_joints: int = 7, arm_qpos_start: int = 0):
         self.num_joints = num_joints
+        self.arm_qpos_start = arm_qpos_start
         self._home_config = load_config().HOME_CONFIG
         self.trajectory: List[np.ndarray] = []
         self.current_waypoint_idx = 0
@@ -54,8 +55,11 @@ class TrajectoryExecutor:
 
     def update_current_joints(self, joints: np.ndarray):
         """Update current joint positions from MuJoCo"""
-        # For hunter model: skip freejoint(7) + steering(2) + wheels(4) = 13
-        if len(joints) >= 20:
+        if self.arm_qpos_start > 0:
+            # Config specifies where arm joints start in qpos array
+            self.current_joints = joints[self.arm_qpos_start:self.arm_qpos_start + self.num_joints].copy()
+        elif len(joints) >= 20:
+            # Legacy: Hunter model — skip freejoint(7) + steering(2) + wheels(4) = 13
             self.current_joints = joints[13:13 + self.num_joints].copy()
         else:
             self.current_joints = joints[:self.num_joints].copy()
@@ -123,7 +127,8 @@ def main():
 
     node = Node()
     config = load_config()
-    executor = TrajectoryExecutor(num_joints=config.NUM_JOINTS)
+    arm_qpos_start = getattr(config, "ARM_QPOS_START", 0)
+    executor = TrajectoryExecutor(num_joints=config.NUM_JOINTS, arm_qpos_start=arm_qpos_start)
 
     executor.current_joints = config.SAFE_CONFIG.copy()
     executor.last_command = config.SAFE_CONFIG.copy()

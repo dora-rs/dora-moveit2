@@ -21,7 +21,7 @@ nodes:
       - joint_velocities
       - sensor_data
     env:
-      MODEL_NAME: ../models/nano_arm.xml
+      MODEL_NAME: ../models/nano_full.xml
       MUJOCO_GL: "glfw"
 
   # ===========================================
