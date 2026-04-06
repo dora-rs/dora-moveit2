@@ -95,11 +95,19 @@ class NumericalIKSolver:
             return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
 
         def rot_axis(angle, axis):
-            if axis[2] != 0:
-                return rot_z(angle)
-            elif axis[1] != 0:
-                return rot_y(angle)
-            return rot_x(angle)
+            ax = np.array(axis, dtype=float)
+            norm = np.linalg.norm(ax)
+            if norm < 1e-10:
+                return np.eye(3)
+            ax = ax / norm
+            if abs(ax[0]) < 1e-6 and abs(ax[1]) < 1e-6:
+                return rot_z(angle * np.sign(ax[2]))
+            if abs(ax[0]) < 1e-6 and abs(ax[2]) < 1e-6:
+                return rot_y(angle * np.sign(ax[1]))
+            if abs(ax[1]) < 1e-6 and abs(ax[2]) < 1e-6:
+                return rot_x(angle * np.sign(ax[0]))
+            K = np.array([[0, -ax[2], ax[1]], [ax[2], 0, -ax[0]], [-ax[1], ax[0], 0]])
+            return np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
 
         T = np.eye(4)
 
