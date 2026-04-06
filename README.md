@@ -2,6 +2,8 @@
 
 A reusable robot motion planning library for the [dora-rs](https://github.com/dora-rs/dora) dataflow framework. Provides MoveIt-style IK solving, collision-aware OMPL planning, trajectory execution, and a high-level MoveGroup API — for any robot arm.
 
+![UR5e + Robotiq 2F-85 Pick-and-Place Demo](images/ur5e_pick_place.png)
+
 ## Features
 
 - **MoveGroup API** — High-level interface similar to ROS MoveIt's MoveGroupCommander
@@ -20,17 +22,17 @@ pip install -e dora_moveit/
 # Install an example app
 pip install -e examples/move_group_demo/
 
-# Run the ROS MoveIt-style example (GEN72 arm in MuJoCo)
+# Run the UR5e pick-and-place example
 cd examples/move_group_demo
 dora up
-dora start dataflows/moveit_example_mujoco.yml
+dora start dataflows/ur5e_example_mujoco.yml
 ```
 
 ## Examples
 
 | Example | Robot | Description |
 |---------|-------|-------------|
-| [move_group_demo](examples/move_group_demo/) | GEN72 7-DOF | ROS MoveIt-style API demo — named poses, joint goals, Cartesian paths, collision objects |
+| [move_group_demo](examples/move_group_demo/) | UR5e 6-DOF + Robotiq 2F-85 | Pick-and-place demo with MoveGroup API — named poses, joint goals, Cartesian paths, collision objects |
 | [hunter_with_arm](examples/hunter_with_arm/) | Hunter SE + GEN72 | Mobile robot with arm for multi-view inspection |
 
 See the [examples README](examples/README.md) for details and a guide to creating your own.
@@ -59,27 +61,27 @@ dora-mujoco/           # MuJoCo simulation node
 ```python
 from dora_moveit.workflow.move_group import MoveGroup
 
-group = MoveGroup("gen72")
+group = MoveGroup("ur5e")
 scene = group.get_planning_scene_interface()
 
 # 1. Named pose
 group.set_named_target("home")
 group.go(wait=True)
 
-# 2. Joint-space goal
-group.go([1.57, -0.785, 0.0, -1.57, 0.0, 0.785, 0.0], wait=True)
+# 2. Joint-space goal (6-DOF for UR5e)
+group.go([1.57, -0.785, 1.57, -1.57, -1.57, 0.0], wait=True)
 
 # 3. Cartesian pose goal (IK solved internally)
-group.set_pose_target([0.15, 0.1, 0.6, 0, 0, 0])
+group.set_pose_target([0.35, -0.25, 0.20, 0, 0, 0])
 group.go(wait=True)
 
 # 4. Cartesian path (straight line in workspace)
-waypoints = [[0.15, 0.1, 0.5, 0, 0, 0], [0.15, 0.2, 0.5, 0, 0, 0]]
+waypoints = [[0.35, -0.25, 0.20, 0, 0, 0], [0.35, 0.25, 0.20, 0, 0, 0]]
 trajectory, fraction = group.compute_cartesian_path(waypoints, eef_step=0.01)
 group.execute(trajectory, wait=True)
 
 # 5. Collision objects
-scene.add_box("obstacle", [0.4, 0.0, 0.5], [0.1, 0.1, 0.5])
+scene.add_box("obstacle", [0.4, 0.0, 0.3], [0.1, 0.1, 0.3])
 group.set_named_target("home")
 group.go(wait=True)  # planner avoids the box
 scene.remove_world_object("obstacle")
@@ -96,10 +98,10 @@ Library operators are robot-agnostic. Define a config class for your robot:
 import numpy as np
 
 class MyRobotConfig:
-    NUM_JOINTS = 6
+    NUM_JOINTS = 6  # or 7 for 7-DOF arms
     JOINT_LOWER_LIMITS = np.array([...])
     JOINT_UPPER_LIMITS = np.array([...])
-    LINK_TRANSFORMS = [...]
+    LINK_TRANSFORMS = [...]  # per-joint axis, xyz, rpy
     COLLISION_GEOMETRY = [...]
     HOME_CONFIG = np.array([...])
     SAFE_CONFIG = np.array([...])
@@ -116,6 +118,106 @@ Set the env var in your dataflow YAML:
 ```
 
 See [`dora_moveit/dora_moveit/config.py`](dora_moveit/dora_moveit/config.py) for the full `RobotConfig` protocol and [`examples/`](examples/) for a complete working example.
+
+## Deployment Guide — MuJoCo Demos
+
+### Prerequisites
+
+- Python 3.9+
+- [dora-rs](https://github.com/dora-rs/dora) CLI installed (`cargo install dora-cli` or download a release binary)
+- A display server (X11/Wayland) for the MuJoCo viewer
+
+### 1. UR5e Pick-and-Place Demo
+
+The primary demo — a UR5e 6-DOF arm with Robotiq 2F-85 gripper performing pick-and-place of a red ball. Uses official MuJoCo Menagerie meshes.
+
+```bash
+# 1. Install packages
+pip install -e dora_moveit/
+pip install -e dora-mujoco/
+pip install -e examples/move_group_demo/
+
+# 2. Launch
+cd examples/move_group_demo
+dora up
+dora start dataflows/ur5e_example_mujoco.yml
+
+# 3. Stop when done
+dora stop
+```
+
+**Standalone pick-and-place visualization** (no dora required):
+
+```bash
+cd examples/move_group_demo/models
+mjpython pick_and_place_demo.py
+```
+
+**Dataflow nodes:** `mujoco_sim` → `planning_scene` → `planner` → `ik_solver` → `trajectory_executor` → `user_node`
+
+The `user_node` runs through all 5 MoveGroup demos automatically. The MuJoCo viewer shows the UR5e arm moving in real time.
+
+**Troubleshooting:**
+- If nodes fail with `ModuleNotFoundError`, ensure all three packages are installed in the same Python environment that dora uses. You can set `PYTHONPATH` in each node's `env:` block in the dataflow YAML to point to your site-packages directory.
+- If you see `version mismatch: message format vX is not compatible with vY`, make sure the `dora-rs` Python package version matches your `dora` CLI version (`dora --version`).
+
+### 2. Hunter with ARM Demo (Mobile Robot + Arm)
+
+Hunter SE mobile platform with a GEN72 arm mounted on top, operating in an industrial pipe inspection scene.
+
+```bash
+# 1. Install packages
+pip install -e dora_moveit/
+pip install -e dora-mujoco/
+pip install -e examples/hunter_with_arm/
+
+# 2. Launch MoveGroup API demo
+cd examples/hunter_with_arm
+dora up
+dora start dataflows/movegroup_mujoco.yml
+
+# 3. Stop when done
+dora stop
+```
+
+**Available dataflows:**
+
+| Dataflow | Description |
+|----------|-------------|
+| `movegroup_mujoco.yml` | MoveGroup API demo — arm moves through named poses, joint goals, and planned trajectories |
+| `hunter_arm_mujoco.yml` | Choreographed multi-view capture — arm sequences through inspection positions |
+| `gen72_mujoco.yml` | Standalone GEN72 arm simulation (no Hunter SE vehicle) |
+| `gen72_real.yml` | Physical GEN72 arm via Realman SDK (requires hardware) |
+
+**Dataflow nodes (movegroup):** `mujoco_sim` → `planning_scene` → `planner` → `ik_solver` → `trajectory_executor` → `vehicle_controller` → `user_node`
+
+The demo automatically:
+1. Moves the arm to home position
+2. Turns the arm right
+3. Arches over a pipe (capture position)
+4. Returns to home
+5. Executes a planned trajectory
+6. Idles when complete
+
+**Troubleshooting:**
+- Verify the `MODEL_NAME` path in the dataflow YAML points to the correct `.xml` file under `examples/hunter_with_arm/models/`.
+- The Hunter SE model (`hunter_se_with_arm_and_pipes.xml`) includes the vehicle, arm, and industrial pipe scene. If you only want the arm, use `gen72_mujoco.yml` instead.
+
+### Environment Variable Setup (Alternative to pip install)
+
+If you prefer not to use pip editable installs, set `PYTHONPATH` directly:
+
+```bash
+export PYTHONPATH=/path/to/dora_moveit:/path/to/dora-mujoco:/path/to/examples/hunter_with_arm:$PYTHONPATH
+```
+
+Or add `PYTHONPATH` to each node's `env:` block in the dataflow YAML:
+
+```yaml
+env:
+  ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
+  PYTHONPATH: "/path/to/your/site-packages"
+```
 
 ## Adding a New Robot
 

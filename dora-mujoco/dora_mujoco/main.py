@@ -168,79 +168,80 @@ class MuJoCoSimulator:
         return self.state_data.copy()
 
 
+def _run_event_loop(node, simulator, viewer=None):
+    """Run the main Dora event loop (with or without viewer)."""
+    for event in node:
+        if event["type"] == "INPUT":
+            if event["id"] == "control_input":
+                control_array = event["value"].to_numpy()
+                simulator.apply_control(control_array)
+            elif event["id"] == "wheel_control":
+                wheel_cmd = event["value"].to_numpy()
+                if len(wheel_cmd) >= 2 and simulator.model.nu >= 11:
+                    simulator.data.ctrl[7] = 0.0
+                    simulator.data.ctrl[8] = 0.0
+                    simulator.data.ctrl[9] = wheel_cmd[0]
+                    simulator.data.ctrl[10] = wheel_cmd[1]
+
+        simulator.step_simulation()
+        if viewer is not None:
+            viewer.sync()
+
+        if event["type"] == "INPUT":
+            state = simulator.get_state()
+            current_time = state.get("time", time.time())
+
+            node.send_output(
+                "joint_positions",
+                pa.array(state["qpos"]),
+                {"timestamp": current_time, "encoding": "jointstate"}
+            )
+            node.send_output(
+                "joint_velocities",
+                pa.array(state["qvel"]),
+                {"timestamp": current_time}
+            )
+            node.send_output(
+                "actuator_controls",
+                pa.array(state["ctrl"]),
+                {"timestamp": current_time}
+            )
+            if len(state["sensordata"]) > 0:
+                node.send_output(
+                    "sensor_data",
+                    pa.array(state["sensordata"]),
+                    {"timestamp": current_time}
+                )
+
+
 def main():
     """Run the main Dora node function."""
     node = Node()
-    
-    # Initialize simulator
+
     simulator = MuJoCoSimulator()
-    
-    # Load model
+
     if not simulator.load_model():
         print("Failed to load MuJoCo model")
         return
-        
-    print("MuJoCo simulation node started")
-    
-    # Launch viewer
-    with mujoco.viewer.launch_passive(simulator.model, simulator.data) as viewer:        
-        print("MuJoCo viewer launched - simulation running")
-        
-        # Main Dora event loop
-        for event in node:
-            if event["type"] == "INPUT":
-                # Handle control input
-                if event["id"] == "control_input":
-                    control_array = event["value"].to_numpy()
-                    simulator.apply_control(control_array)
-                    # print(f"Applied control: {control_array[:7]}")  # Show first 7 values
-                elif event["id"] == "wheel_control":
-                    wheel_cmd = event["value"].to_numpy()
-                    if len(wheel_cmd) >= 2 and simulator.model.nu >= 11:
-                        # Steering locked straight: actuators [7],[8]
-                        simulator.data.ctrl[7] = 0.0
-                        simulator.data.ctrl[8] = 0.0
-                        # Rear drive wheels: actuators [9],[10]
-                        simulator.data.ctrl[9] = wheel_cmd[0]
-                        simulator.data.ctrl[10] = wheel_cmd[1]
 
-            # Step simulation once per loop iteration
-            simulator.step_simulation()
-            viewer.sync()
-            
-            # Send outputs after stepping
-            if event["type"] == "INPUT":
-                state = simulator.get_state()
-                current_time = state.get("time", time.time())
-                
-                # Send joint positions
-                node.send_output(
-                    "joint_positions", 
-                    pa.array(state["qpos"]), 
-                    {"timestamp": current_time, "encoding": "jointstate"}
-                )
-                
-                # Send joint velocities
-                node.send_output(
-                    "joint_velocities", 
-                    pa.array(state["qvel"]), 
-                    {"timestamp": current_time}
-                )
-                
-                # Send actuator controls
-                node.send_output(
-                    "actuator_controls",
-                    pa.array(state["ctrl"]),
-                    {"timestamp": current_time}
-                )
-                
-                # Send sensor data if available
-                if len(state["sensordata"]) > 0:
-                    node.send_output(
-                        "sensor_data", 
-                        pa.array(state["sensordata"]), 
-                        {"timestamp": current_time}
-                    )
+    print("MuJoCo simulation node started")
+
+    headless = os.getenv("MUJOCO_HEADLESS", "").lower() in ("1", "true", "yes")
+
+    if headless:
+        print("Running in headless mode (no viewer)")
+        _run_event_loop(node, simulator)
+    else:
+        try:
+            with mujoco.viewer.launch_passive(simulator.model, simulator.data) as viewer:
+                print("MuJoCo viewer launched - simulation running")
+                _run_event_loop(node, simulator, viewer)
+        except RuntimeError as e:
+            if "mjpython" in str(e):
+                print(f"Viewer unavailable on macOS ({e}), falling back to headless mode")
+                _run_event_loop(node, simulator)
+            else:
+                raise
 
 
 if __name__ == "__main__":

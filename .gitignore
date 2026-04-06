@@ -12,6 +12,9 @@ build/
 *.bak
 *.log
 
+# Claude Code
+CLAUDE.md
+
 # IDE
 .vscode/
 .idea/

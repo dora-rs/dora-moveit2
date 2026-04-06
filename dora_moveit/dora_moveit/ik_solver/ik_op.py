@@ -65,52 +65,66 @@ class NumericalIKSolver:
 
         # Safe/home configuration for IK seeding
         self._safe_config = config.SAFE_CONFIG
+
+        # EE offset (if defined in config)
+        self._ee_offset = getattr(config, 'EE_OFFSET', None)
         
     def forward_kinematics(self, joint_positions: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Compute forward kinematics using GEN72 link transforms.
+        Compute forward kinematics using link transforms from config.
+        Supports per-joint rotation axes.
 
         Args:
-            joint_positions: Joint angles [7]
+            joint_positions: Joint angles
 
         Returns:
             Tuple of (position [3], rotation_matrix [3x3])
         """
         q = joint_positions
 
-        # Helper function for rotation matrices
         def rot_z(angle):
             c, s = np.cos(angle), np.sin(angle)
             return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+
+        def rot_y(angle):
+            c, s = np.cos(angle), np.sin(angle)
+            return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
 
         def rot_x(angle):
             c, s = np.cos(angle), np.sin(angle)
             return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
 
-        # Start from base
+        def rot_axis(angle, axis):
+            if axis[2] != 0:
+                return rot_z(angle)
+            elif axis[1] != 0:
+                return rot_y(angle)
+            return rot_x(angle)
+
         T = np.eye(4)
 
-        # Apply each joint transform from the robot config
-        transforms = self.link_transforms
-
-        for i, (joint_angle, link_tf) in enumerate(zip(q, transforms)):
-            # Extract xyz and rpy from link transform
+        for i, (joint_angle, link_tf) in enumerate(zip(q, self.link_transforms)):
             xyz = np.array(link_tf["xyz"])
             rpy = link_tf["rpy"]
+            axis = link_tf.get("axis", [0, 0, 1])
 
-            # Build transform matrix for this link
-            R_link = rot_z(rpy[2]) @ rot_x(rpy[0])  # Simplified: only use roll and yaw
+            R_link = rot_z(rpy[2]) @ rot_y(rpy[1]) @ rot_x(rpy[0])
             T_link = np.eye(4)
             T_link[:3, :3] = R_link
             T_link[:3, 3] = xyz
 
-            # Apply link transform
             T = T @ T_link
 
-            # Apply joint rotation (all joints rotate around Z-axis)
             T_joint = np.eye(4)
-            T_joint[:3, :3] = rot_z(joint_angle)
+            T_joint[:3, :3] = rot_axis(joint_angle, axis)
             T = T @ T_joint
+
+        # Apply EE offset if defined
+        ee_offset = getattr(self, '_ee_offset', None)
+        if ee_offset is not None:
+            T_ee = np.eye(4)
+            T_ee[:3, 3] = ee_offset
+            T = T @ T_ee
 
         position = T[:3, 3]
         rotation = T[:3, :3]
@@ -320,8 +334,9 @@ def main():
     print("=== Dora-MoveIt IK Operator ===")
 
     node = Node()
+    config = load_config()
     # Use TracIK solver by default (can be changed to "de" or "simple")
-    ik_op = IKOperator(num_joints=7, solver_type="tracik")
+    ik_op = IKOperator(num_joints=config.NUM_JOINTS, solver_type="tracik")
 
     print("IK operator started, waiting for requests...")
     

@@ -20,8 +20,9 @@ nodes:
       - joint_velocities
       - sensor_data
     env:
-      MODEL_NAME: "/home/demo/Downloads/dora-moveit/examples/hunter_with_arm/models/hunter_se_with_arm_and_pipes.xml"
+      MODEL_NAME: "/home/demo/Public/dora-moveit2/examples/hunter_with_arm/models/hunter_se_with_arm_and_pipes.xml"
       MUJOCO_GL: "glfw"
+      PYTHONPATH: "/home/demo/Public/dora-moveit2/.venv/lib/python3.10/site-packages"
 
   # ===========================================
   # Planning Scene (library operator)
@@ -37,6 +38,7 @@ nodes:
       - command_result
     env:
       ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
+      PYTHONPATH: "/home/demo/Public/dora-moveit2/.venv/lib/python3.10/site-packages"
 
   # ===========================================
   # OMPL Motion Planner (library operator)
@@ -51,6 +53,7 @@ nodes:
       - plan_status
     env:
       ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
+      PYTHONPATH: "/home/demo/Public/dora-moveit2/.venv/lib/python3.10/site-packages"
 
   # ===========================================
   # IK Solver (library operator)
@@ -64,6 +67,7 @@ nodes:
       - ik_status
     env:
       ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
+      PYTHONPATH: "/home/demo/Public/dora-moveit2/.venv/lib/python3.10/site-packages"
 
   # ===========================================
   # Trajectory Executor (library operator)
@@ -79,6 +83,7 @@ nodes:
       - execution_status
     env:
       ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
+      PYTHONPATH: "/home/demo/Public/dora-moveit2/.venv/lib/python3.10/site-packages"
 
   # ===========================================
   # Vehicle Controller (app-specific)
@@ -90,6 +95,8 @@ nodes:
     outputs:
       - wheel_commands
       - movement_complete
+    env:
+      PYTHONPATH: "/home/demo/Public/dora-moveit2/.venv/lib/python3.10/site-packages"
 
   # ===========================================
   # User Node (MoveGroup API example script)
@@ -112,3 +119,4 @@ nodes:
       - scene_command
     env:
       ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
+      PYTHONPATH: "/home/demo/Public/dora-moveit2/.venv/lib/python3.10/site-packages"

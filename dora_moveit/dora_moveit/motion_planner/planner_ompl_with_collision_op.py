@@ -462,7 +462,8 @@ class PlannerOperator:
     """
 
     def __init__(self):
-        self.planner = OMPLPlanner(num_joints=7)
+        config = load_config()
+        self.planner = OMPLPlanner(num_joints=config.NUM_JOINTS)
         self.plan_count = 0
         self.last_scene_version = -1  # Track scene version to avoid redundant updates
 
