@@ -1,5 +1,13 @@
 # Release Notes
 
+## v0.3.7 — Nano Pick-and-Place with Joint-Space Goals
+
+### Changes
+- **Joint-space pick-and-place**: Rewrote `nano_pick_place_example.py` to use direct joint goals instead of IK pose targets, ensuring reliable reach to ball and plate positions
+- **Red ball under gripper**: Repositioned target ball to [-0.025, 0.17, 0.055] directly under the arm's reachable workspace
+- **Green place plate**: Added green cylinder at [0.10, 0.09, 0.04] as the placement target
+- **FK-scanned joint configs**: Pick config q=[0.13, 0.39, -1.18, 1.5, 0, 0], Place config q=[-1.97, 0.13, -1.45, 0, 0, 0]
+
 ## v0.3.6 — Nano Pick-and-Place Demo
 
 ### Changes

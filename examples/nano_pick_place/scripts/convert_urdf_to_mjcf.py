@@ -176,16 +176,30 @@ def post_process(mjcf_text: str) -> str:
     ground.set("rgba", "0.9 0.9 0.9 1")
     ground.set("pos", "0 0 0")
 
-    # --- Add target object (freejoint sphere for pick-and-place) ---
+    # --- Add target ball (right under the gripper at home-ish position) ---
+    # Gripper reaches [-0.025, 0.17, 0.065] when arm points forward-down.
+    # Place ball on the plate surface in front of the arm base.
     target_body = ET.SubElement(worldbody, "body")
     target_body.set("name", "target_object")
-    target_body.set("pos", "0.12 0.0 0.02")
+    target_body.set("pos", "-0.025 0.17 0.055")
     fj = ET.SubElement(target_body, "freejoint")
     target_geom = ET.SubElement(target_body, "geom")
     target_geom.set("type", "sphere")
-    target_geom.set("size", "0.015")
+    target_geom.set("size", "0.012")
     target_geom.set("rgba", "1 0 0 1")
-    target_geom.set("mass", "0.01")
+    target_geom.set("mass", "0.005")
+
+    # --- Add green place plate (to the right of the arm) ---
+    # Gripper reaches [0.10, 0.09, 0.065] when base rotated ~90deg right.
+    place_plate = ET.SubElement(worldbody, "geom")
+    place_plate.set("name", "place_plate")
+    place_plate.set("type", "cylinder")
+    place_plate.set("size", "0.04 0.003")
+    place_plate.set("pos", "0.10 0.09 0.04")
+    place_plate.set("rgba", "0.2 0.8 0.2 1")
+    place_plate.set("mass", "0.1")
+    place_plate.set("contype", "1")
+    place_plate.set("conaffinity", "1")
 
     # --- Add light ---
     light = ET.SubElement(worldbody, "light")
