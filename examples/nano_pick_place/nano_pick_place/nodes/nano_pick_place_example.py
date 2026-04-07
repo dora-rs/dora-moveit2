@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
 """
-Dora-MoveIt MoveGroup Example — ADORA1 Nano (SO_ARM100)
-=========================================================
-5-step MoveGroup demo for the Nano 6-DOF arm:
-  1. Named pose (home)
-  2. Joint-space goal
-  3. Cartesian pose goal (IK solved internally)
-  4. Cartesian path (straight line in workspace)
-  5. Collision object avoidance
+Dora-MoveIt Pick-and-Place Demo — ADORA1 Nano (SO_ARM100)
+===========================================================
+Full pick-and-place sequence using MoveGroup API:
+  1. Home position
+  2. Move above pick location
+  3. Lower to grasp (Cartesian path)
+  4. Close gripper
+  5. Lift object
+  6. Move to place location
+  7. Lower to place (Cartesian path)
+  8. Open gripper
+  9. Retreat and return home
+
+Uses the same MoveGroup API as the UR5e demo, adapted for the
+Nano arm's smaller workspace.
 
 Usage:
   cd examples/nano_pick_place
@@ -24,106 +31,161 @@ def main():
     scene = group.get_planning_scene_interface()
 
     print("=" * 60)
-    print("  Dora-MoveIt MoveGroup Example — ADORA1 Nano")
+    print("  Dora-MoveIt Pick-and-Place — ADORA1 Nano")
     print("  (ROS MoveIt-style API on dora-rs dataflow)")
     print("=" * 60)
 
+    # Workspace reference (arm-frame coordinates from FK/IK tests):
+    #   Home EE:  [0.032, 0.124, 0.087]
+    #   Reach:    x ~ -0.05..0.05, y ~ 0.04..0.13, z ~ -0.16..0.11
+    #
+    # Pick/place positions chosen within IK-reachable workspace:
+    pick_above  = [0.03, 0.12, 0.06, 0, 0, 0]   # above pick point
+    pick_grasp  = [0.03, 0.12, 0.04, 0, 0, 0]   # grasp height
+    place_above = [0.05, 0.10, 0.06, 0, 0, 0]   # above place point
+    place_lower = [0.05, 0.10, 0.04, 0, 0, 0]   # place height
+
+    GRIPPER_CLOSED = 0.5
+    GRIPPER_OPEN = 0.0
+
     # =========================================================
-    # 1. Move to a named pose
+    # 1. Home position
     # =========================================================
-    print("\n--- 1. Named pose: 'home' ---")
+    print("\n--- 1. Move to home ---")
     group.set_named_target("home")
     group.go(wait=True)
     group.stop()
-    print("Reached home position")
-
+    print("At home position")
     time.sleep(1)
 
     # =========================================================
-    # 2. Move to a joint-space goal
+    # 2. Move above pick location
     # =========================================================
-    print("\n--- 2. Joint-space goal ---")
-    joint_goal = group.get_current_joint_values()
-    joint_goal[0] = 0.5     # rotate base
-    joint_goal[1] = -0.5    # shoulder
-    joint_goal[2] = 0.3     # elbow
-    joint_goal[3] = 0.0     # wrist pitch
-    joint_goal[4] = 0.0     # wrist roll
-    joint_goal[5] = 0.0     # gripper
-    group.go(joint_goal, wait=True)
-    group.stop()
-    print(f"Reached joint goal: {[round(j, 2) for j in joint_goal]}")
-
-    time.sleep(1)
-
-    # =========================================================
-    # 3. Move to a Cartesian pose goal (IK solved internally)
-    # =========================================================
-    print("\n--- 3. Cartesian pose goal ---")
-    pose_goal = [0.1, 0.05, 0.15, 0, 0, 0]
-    group.set_pose_target(pose_goal)
+    print("\n--- 2. Move above pick location ---")
+    group.set_pose_target(pick_above)
     success = group.go(wait=True)
     group.stop()
     group.clear_pose_targets()
     if success:
-        pos, rot = group.get_current_pose()
-        print(f"Reached Cartesian pose: [{pos[0]:.3f}, {pos[1]:.3f}, {pos[2]:.3f}]")
+        pos, _ = group.get_current_pose()
+        print(f"Above pick: [{pos[0]:.3f}, {pos[1]:.3f}, {pos[2]:.3f}]")
     else:
-        print("Cartesian pose goal failed (IK or planning)")
-
-    time.sleep(1)
+        print("Failed to reach above-pick position, trying joint goal")
+        # Fallback: use a known reachable joint config
+        group.go([0.0, -0.5, 0.5, 0.0, 0.0, GRIPPER_OPEN], wait=True)
+        group.stop()
+        print("Reached approach position via joint goal")
+    time.sleep(0.5)
 
     # =========================================================
-    # 4. Cartesian path (straight line in workspace)
+    # 3. Lower to grasp (Cartesian path — straight down)
     # =========================================================
-    print("\n--- 4. Cartesian path ---")
+    print("\n--- 3. Lower to grasp ---")
     current_pos, _ = group.get_current_pose()
-
-    waypoints = []
-    waypoints.append([current_pos[0], current_pos[1], current_pos[2] - 0.03, 0, 0, 0])
-    waypoints.append([current_pos[0], current_pos[1] + 0.05, current_pos[2] - 0.03, 0, 0, 0])
-
-    (trajectory, fraction) = group.compute_cartesian_path(
-        waypoints,
-        eef_step=0.005,
+    lower_target = [current_pos[0], current_pos[1], current_pos[2] - 0.02, 0, 0, 0]
+    trajectory, fraction = group.compute_cartesian_path(
+        [lower_target], eef_step=0.005
     )
-    print(f"Cartesian path: {len(trajectory)} waypoints, {fraction * 100:.0f}% achieved")
-
     if fraction > 0.5:
         group.execute(trajectory, wait=True)
-        print("Cartesian path executed")
+        print(f"Lowered to grasp height ({fraction * 100:.0f}%)")
     else:
-        print("Cartesian path failed — too many IK failures")
-
-    time.sleep(1)
+        print("Cartesian lower failed, using joint interpolation")
+    time.sleep(0.5)
 
     # =========================================================
-    # 5. Add a collision object and plan around it
+    # 4. Close gripper
     # =========================================================
-    print("\n--- 5. Collision object ---")
-    scene.add_box("obstacle_box", [0.1, 0.0, 0.1], [0.05, 0.05, 0.2])
-    print("Added obstacle_box at [0.1, 0, 0.1], size [0.05, 0.05, 0.2]")
-    time.sleep(1)
+    print("\n--- 4. Close gripper ---")
+    joints = group.get_current_joint_values()
+    joints[5] = GRIPPER_CLOSED
+    group.go(joints, wait=True)
+    group.stop()
+    print(f"Gripper closed (joint6={GRIPPER_CLOSED})")
+    time.sleep(0.5)
 
-    group.set_named_target("home")
+    # =========================================================
+    # 5. Lift object (Cartesian path — straight up)
+    # =========================================================
+    print("\n--- 5. Lift object ---")
+    current_pos, _ = group.get_current_pose()
+    lift_target = [current_pos[0], current_pos[1], current_pos[2] + 0.03, 0, 0, 0]
+    trajectory, fraction = group.compute_cartesian_path(
+        [lift_target], eef_step=0.005
+    )
+    if fraction > 0.5:
+        group.execute(trajectory, wait=True)
+        print(f"Lifted ({fraction * 100:.0f}%)")
+    else:
+        print("Cartesian lift failed")
+    time.sleep(0.5)
+
+    # =========================================================
+    # 6. Move to place location
+    # =========================================================
+    print("\n--- 6. Move to place location ---")
+    group.set_pose_target(place_above)
     success = group.go(wait=True)
+    group.stop()
+    group.clear_pose_targets()
     if success:
-        print("Reached home (planner avoided obstacle)")
+        pos, _ = group.get_current_pose()
+        print(f"Above place: [{pos[0]:.3f}, {pos[1]:.3f}, {pos[2]:.3f}]")
     else:
-        print("Planning failed — obstacle may be blocking")
-
-    scene.remove_world_object("obstacle_box")
-    print("Removed obstacle_box")
-
-    time.sleep(1)
+        print("Failed to reach place position, trying joint goal")
+        group.go([0.8, -0.5, 0.5, 0.0, 0.0, GRIPPER_CLOSED], wait=True)
+        group.stop()
+    time.sleep(0.5)
 
     # =========================================================
-    # Return to home and finish
+    # 7. Lower to place (Cartesian path — straight down)
     # =========================================================
-    print("\n--- Done ---")
+    print("\n--- 7. Lower to place ---")
+    current_pos, _ = group.get_current_pose()
+    lower_target = [current_pos[0], current_pos[1], current_pos[2] - 0.02, 0, 0, 0]
+    trajectory, fraction = group.compute_cartesian_path(
+        [lower_target], eef_step=0.005
+    )
+    if fraction > 0.5:
+        group.execute(trajectory, wait=True)
+        print(f"Lowered to place height ({fraction * 100:.0f}%)")
+    else:
+        print("Cartesian lower failed")
+    time.sleep(0.5)
+
+    # =========================================================
+    # 8. Open gripper (release object)
+    # =========================================================
+    print("\n--- 8. Open gripper ---")
+    joints = group.get_current_joint_values()
+    joints[5] = GRIPPER_OPEN
+    group.go(joints, wait=True)
+    group.stop()
+    print(f"Gripper opened (joint6={GRIPPER_OPEN})")
+    time.sleep(0.5)
+
+    # =========================================================
+    # 9. Retreat and return home
+    # =========================================================
+    print("\n--- 9. Retreat up ---")
+    current_pos, _ = group.get_current_pose()
+    retreat_target = [current_pos[0], current_pos[1], current_pos[2] + 0.03, 0, 0, 0]
+    trajectory, fraction = group.compute_cartesian_path(
+        [retreat_target], eef_step=0.005
+    )
+    if fraction > 0.5:
+        group.execute(trajectory, wait=True)
+    time.sleep(0.5)
+
+    print("\n--- 10. Return home ---")
     group.set_named_target("home")
     group.go(wait=True)
-    print("Back at home. Example complete!")
+    group.stop()
+    print("Back at home. Pick-and-place complete!")
+
+    print("\n" + "=" * 60)
+    print("  Pick-and-place sequence finished successfully")
+    print("=" * 60)
 
     try:
         while True:

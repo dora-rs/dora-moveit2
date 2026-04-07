@@ -119,11 +119,25 @@ def post_process(mjcf_text: str) -> str:
         compiler = ET.SubElement(root, "compiler")
     compiler.set("meshdir", "nano_assets")
 
+    # --- Raise robot so wheels touch ground ---
+    # Wheel centers are at z=0.018, wheel radius ~0.051, so bottom at z=-0.033.
+    # Wrap all worldbody children in a body raised by 0.035m (small margin).
+    worldbody = root.find("worldbody")
+    z_offset = 0.035  # raise so wheel bottoms just touch ground
+    robot_body = ET.SubElement(worldbody, "body")
+    robot_body.set("name", "robot_base")
+    robot_body.set("pos", f"0 0 {z_offset}")
+    # Move all existing worldbody children into the robot_base body
+    children_to_move = list(worldbody)
+    for child in children_to_move:
+        if child is not robot_body:
+            worldbody.remove(child)
+            robot_body.append(child)
+
     # --- Print joint info for debugging ---
     print("\n=== Joint index mapping ===")
     joint_qpos_map = {}
     qpos_idx = 0
-    worldbody = root.find("worldbody")
 
     # Collect all joints by traversing the XML
     all_joints = root.findall(".//joint")

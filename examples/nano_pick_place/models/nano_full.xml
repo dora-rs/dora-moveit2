@@ -47,7 +47,7 @@
   </asset>
 
   <worldbody>
-    <geom name="base_plate_layer1-v5_collision" type="mesh" mesh="base_plate_layer1-v5" />
+    <body name="robot_base" pos="0 0 0.035"><geom name="base_plate_layer1-v5_collision" type="mesh" mesh="base_plate_layer1-v5" />
     <geom name="drive_motor_mount-v11-2_collision" pos="-0.02 -0.1 0.0035" quat="-0.707107 0 0 0.707107" type="mesh" mesh="drive_motor_mount-v11-2" />
     <geom name="ST3215_Servo_Motor-v1-2_collision" pos="-0.02489 -0.1096 0.01786" quat="0 0 0 1" type="mesh" mesh="ST3215_Servo_Motor-v1-2" />
     <geom name="drive_motor_mount-v11-1_collision" pos="0.079282 0.0226795 0.0035" quat="0.965926 0 0 0.258819" type="mesh" mesh="drive_motor_mount-v11-1" />
@@ -125,5 +125,5 @@
         </body>
       </body>
     </body>
-  <geom name="ground" type="plane" size="1 1 0.01" rgba="0.9 0.9 0.9 1" pos="0 0 0" /><body name="target_object" pos="0.12 0.0 0.02"><freejoint /><geom type="sphere" size="0.015" rgba="1 0 0 1" mass="0.01" /></body><light pos="0 0 1.5" dir="0 0 -1" diffuse="0.8 0.8 0.8" /></worldbody>
+  </body><geom name="ground" type="plane" size="1 1 0.01" rgba="0.9 0.9 0.9 1" pos="0 0 0" /><body name="target_object" pos="0.12 0.0 0.02"><freejoint /><geom type="sphere" size="0.015" rgba="1 0 0 1" mass="0.01" /></body><light pos="0 0 1.5" dir="0 0 -1" diffuse="0.8 0.8 0.8" /></worldbody>
 <actuator><position name="act_joint1" joint="STS3215_03a-v1_Revolute-45" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint2" joint="STS3215_03a-v1-1_Revolute-49" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint3" joint="STS3215_03a-v1-2_Revolute-51" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint4" joint="STS3215_03a-v1-3_Revolute-53" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint5" joint="STS3215_03a_Wrist_Roll-v1_Revolute-55" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint6" joint="STS3215_03a-v1-4_Revolute-57" kp="30" ctrlrange="-1.57 1.57" /></actuator></mujoco>
