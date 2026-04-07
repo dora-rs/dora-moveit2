@@ -1,5 +1,11 @@
 # Release Notes
 
+## v0.3.6 — Nano Pick-and-Place Demo
+
+### Changes
+- **Pick-and-place demo**: Rewrote `nano_pick_place_example.py` as full 10-step sequence (approach, lower, grasp, lift, move, place, release, retreat) using IK-reachable positions
+- **Robot body raised**: Added z_offset=0.035 in URDF→MJCF conversion so wheels just touch the ground plane
+
 ## v0.3.5 — Nano Full Robot Model (Mobile Base + Arm)
 
 ### New Features
