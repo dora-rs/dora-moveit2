@@ -1,5 +1,10 @@
 # Release Notes
 
+## v0.5.1 — Dora-MoveIt2 Course Script
+
+### New Features
+- **Dora-MoveIt2 course script** (`course-script/DoraMoveIt2.md`): 8-chapter Chinese course script mirroring the ROS2 MoveIt2 version, adapted for dora-rs + GEN72. Covers environment setup, dataflow basics, robot config, MoveGroup API, single-arm planning, dual-arm coordination, and final demo with complete runnable code examples.
+
 ## v0.5.0 — Dual-Arm Coordination & Course Gap Analysis
 
 ### New Features
