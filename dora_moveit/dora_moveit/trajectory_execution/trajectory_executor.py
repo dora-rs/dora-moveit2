@@ -122,17 +122,31 @@ class TrajectoryExecutor:
         }
 
 
+def _pad_arm_command(arm_cmd: np.ndarray, num_actuators: int, arm_actuator_start: int) -> np.ndarray:
+    """Pad arm-only command into full actuator array (zeros for non-arm actuators)."""
+    if arm_actuator_start == 0 and len(arm_cmd) == num_actuators:
+        return arm_cmd
+    full_cmd = np.zeros(num_actuators, dtype=np.float32)
+    n = min(len(arm_cmd), num_actuators - arm_actuator_start)
+    full_cmd[arm_actuator_start:arm_actuator_start + n] = arm_cmd[:n]
+    return full_cmd
+
+
 def main():
     print("=== Dora-MoveIt Trajectory Executor ===")
 
     node = Node()
     config = load_config()
     arm_qpos_start = getattr(config, "ARM_QPOS_START", 0)
+    num_actuators = getattr(config, "NUM_ACTUATORS", config.NUM_JOINTS)
+    arm_actuator_start = getattr(config, "ARM_ACTUATOR_START", 0)
     executor = TrajectoryExecutor(num_joints=config.NUM_JOINTS, arm_qpos_start=arm_qpos_start)
 
     executor.current_joints = config.SAFE_CONFIG.copy()
     executor.last_command = config.SAFE_CONFIG.copy()
     print(f"Initialized with {config.NUM_JOINTS}-DOF safe config: {executor.current_joints}...")
+    if arm_actuator_start > 0:
+        print(f"  ARM_ACTUATOR_START={arm_actuator_start}, NUM_ACTUATORS={num_actuators}")
 
     first_tick = True
 
@@ -162,15 +176,17 @@ def main():
                 try:
                     # Send initial joint command on first tick
                     if first_tick:
-                        node.send_output("joint_commands", pa.array(executor.last_command, type=pa.float32()))
+                        out_cmd = _pad_arm_command(executor.last_command, num_actuators, arm_actuator_start)
+                        node.send_output("joint_commands", pa.array(out_cmd, type=pa.float32()))
                         first_tick = False
 
                     command = executor.step()
 
                     if command is not None:
+                        out_cmd = _pad_arm_command(command, num_actuators, arm_actuator_start)
                         node.send_output(
                             "joint_commands",
-                            pa.array(command, type=pa.float32())
+                            pa.array(out_cmd, type=pa.float32())
                         )
 
                     status_bytes = json.dumps(executor.get_status()).encode("utf-8")
