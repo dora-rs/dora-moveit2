@@ -1,5 +1,11 @@
 # Release Notes
 
+## v0.5.2 — Dora-MoveIt2 PPT Courseware
+
+### New Features
+- **PPT courseware generator** (`course-script/generate_ppt.py`): Python-pptx script that generates a 26-slide presentation from the Dora-MoveIt2 course content, with dark theme, comparison tables, code blocks, and architecture diagrams
+- **PPT courseware** (`course-script/DoraMoveIt2_课件.pptx`): Ready-to-use 26-slide Chinese courseware covering all 8 chapters of the Dora-MoveIt2 course
+
 ## v0.5.1 — Dora-MoveIt2 Course Script
 
 ### New Features
