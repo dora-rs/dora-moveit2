@@ -48,6 +48,7 @@ from dora_moveit.collision_detection.collision_lib import (
     create_cylinder
 )
 from dora_moveit.config import load_config
+from dora_moveit.config import is_dual_arm
 
 
 class ObjectState(Enum):
@@ -75,6 +76,7 @@ class RobotState:
     joint_velocities: Optional[np.ndarray] = None
     gripper_state: float = 0.0  # 0=open, 1=closed
     timestamp: float = 0.0
+    joint_positions_per_chain: Optional[Dict[str, np.ndarray]] = None
 
 
 @dataclass
@@ -263,25 +265,32 @@ class PlanningSceneOperator:
         print(f"[Scene] Detached '{name}' to world at {obj.position}")
         return True
     
-    def update_robot_state(self, joint_positions: np.ndarray, 
+    def update_robot_state(self, joint_positions: np.ndarray,
                           joint_velocities: Optional[np.ndarray] = None,
-                          gripper_state: Optional[float] = None):
+                          gripper_state: Optional[float] = None,
+                          chain_name: Optional[str] = None):
         """
         Update the current robot state.
-        
+
         Args:
             joint_positions: Joint positions
             joint_velocities: Optional joint velocities
             gripper_state: Optional gripper state (0=open, 1=closed)
+            chain_name: Optional arm chain name for per-chain updates
         """
         self.robot_state.joint_positions = joint_positions.copy()
         self.robot_state.timestamp = time.time()
-        
+
         if joint_velocities is not None:
             self.robot_state.joint_velocities = joint_velocities.copy()
-        
+
         if gripper_state is not None:
             self.robot_state.gripper_state = gripper_state
+
+        if chain_name is not None:
+            if self.robot_state.joint_positions_per_chain is None:
+                self.robot_state.joint_positions_per_chain = {}
+            self.robot_state.joint_positions_per_chain[chain_name] = joint_positions.copy()
     
     def get_scene_state(self) -> PlanningSceneState:
         """Get the complete current scene state"""
@@ -409,16 +418,30 @@ def main():
                 # Update robot state
                 try:
                     joints = event["value"].to_numpy()
-                    # Extract arm joints from full qpos array
-                    arm_start = getattr(config, "ARM_QPOS_START", 0)
-                    if arm_start > 0:
-                        arm_joints = joints[arm_start:arm_start + config.NUM_JOINTS]
-                    elif len(joints) >= 20:
-                        # Legacy: Hunter model — skip freejoint(7) + wheels(6) = 13
-                        arm_joints = joints[13:13 + config.NUM_JOINTS]
+                    # Dual-arm: extract per-chain joints
+                    if is_dual_arm(config):
+                        chain_starts = getattr(config, "ARM_QPOS_START_PER_CHAIN", {})
+                        for chain_name in config.ARM_CHAINS:
+                            start = chain_starts.get(chain_name, 0)
+                            chain_joints = joints[start:start + config.NUM_JOINTS]
+                            scene_op.update_robot_state(chain_joints, chain_name=chain_name)
+                        # Also store full concatenated state
+                        all_joints = np.concatenate([
+                            joints[chain_starts.get(c, 0):chain_starts.get(c, 0) + config.NUM_JOINTS]
+                            for c in config.ARM_CHAINS
+                        ])
+                        scene_op.robot_state.joint_positions = all_joints
                     else:
-                        arm_joints = joints[:config.NUM_JOINTS]
-                    scene_op.update_robot_state(arm_joints)
+                        # Single-arm extraction
+                        arm_start = getattr(config, "ARM_QPOS_START", 0)
+                        if arm_start > 0:
+                            arm_joints = joints[arm_start:arm_start + config.NUM_JOINTS]
+                        elif len(joints) >= 20:
+                            # Legacy: Hunter model — skip freejoint(7) + wheels(6) = 13
+                            arm_joints = joints[13:13 + config.NUM_JOINTS]
+                        else:
+                            arm_joints = joints[:config.NUM_JOINTS]
+                        scene_op.update_robot_state(arm_joints)
                 except Exception as e:
                     print(f"[Scene] Robot state error: {e}")
                     

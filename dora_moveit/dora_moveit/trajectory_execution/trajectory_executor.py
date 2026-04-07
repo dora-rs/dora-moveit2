@@ -13,6 +13,7 @@ import pyarrow as pa
 from typing import List, Optional
 from dora import Node
 from dora_moveit.config import load_config
+from dora_moveit.config import is_dual_arm
 
 
 class TrajectoryExecutor:
@@ -35,6 +36,8 @@ class TrajectoryExecutor:
 
         self.current_joints: Optional[np.ndarray] = None
         self.last_command: Optional[np.ndarray] = None
+        self._is_dual = False
+        self._dual_home = None
 
     def set_trajectory(self, trajectory: List[np.ndarray], trajectory_hash: int):
         """Set a new trajectory to execute"""
@@ -74,7 +77,9 @@ class TrajectoryExecutor:
         # IDLE / HOLD MODE
         # =========================
         if not self.is_executing or len(self.trajectory) == 0:
-            # Return HOME position to keep arm stable during vehicle movement
+            # Return HOME position to keep arm stable
+            if self._is_dual and self._dual_home is not None:
+                return self._dual_home.copy()
             return self._home_config.copy()
 
         if self.prev_waypoint is None:
@@ -142,8 +147,19 @@ def main():
     arm_actuator_start = getattr(config, "ARM_ACTUATOR_START", 0)
     executor = TrajectoryExecutor(num_joints=config.NUM_JOINTS, arm_qpos_start=arm_qpos_start)
 
-    executor.current_joints = config.SAFE_CONFIG.copy()
-    executor.last_command = config.SAFE_CONFIG.copy()
+    if is_dual_arm(config):
+        executor._is_dual = True
+        chain_homes = []
+        for chain_name in config.ARM_CHAINS:
+            chain_home = config.HOME_CONFIG_PER_CHAIN.get(chain_name, config.HOME_CONFIG)
+            chain_homes.append(chain_home)
+        executor._dual_home = np.concatenate(chain_homes)
+        executor.current_joints = executor._dual_home.copy()
+        executor.last_command = executor._dual_home.copy()
+        executor.num_joints = len(executor._dual_home)
+    else:
+        executor.current_joints = config.SAFE_CONFIG.copy()
+        executor.last_command = config.SAFE_CONFIG.copy()
     print(f"Initialized with {config.NUM_JOINTS}-DOF safe config: {executor.current_joints}...")
     if arm_actuator_start > 0:
         print(f"  ARM_ACTUATOR_START={arm_actuator_start}, NUM_ACTUATORS={num_actuators}")
@@ -170,7 +186,17 @@ def main():
                 executor.set_trajectory(trajectory_list, traj_hash)
 
             elif input_id == "joint_positions":
-                executor.update_current_joints(event["value"].to_numpy())
+                joints = event["value"].to_numpy()
+                if is_dual_arm(config):
+                    # Extract per-chain joints and concatenate
+                    chain_starts = getattr(config, "ARM_QPOS_START_PER_CHAIN", {})
+                    parts = []
+                    for chain_name in config.ARM_CHAINS:
+                        start = chain_starts.get(chain_name, 0)
+                        parts.append(joints[start:start + config.NUM_JOINTS])
+                    executor.current_joints = np.concatenate(parts)
+                else:
+                    executor.update_current_joints(joints)
 
             elif input_id == "tick":
                 try:

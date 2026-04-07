@@ -25,6 +25,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, List
 from dora import Node
 from dora_moveit.config import load_config
+from dora_moveit.config import is_dual_arm, get_arm_config
 from dora_moveit.ik_solver.advanced_ik_solver import TracIKSolver, DifferentialEvolutionIKSolver, IKRequest, IKResult
 
 
@@ -360,27 +361,82 @@ def main():
                 ik_op.process_joint_state(joints)
                 
             elif input_id == "ik_request":
-                # Process IK request
-                pose = event["value"].to_numpy()
-                
-                print(f"[IK] Request #{ik_op.request_count + 1}: target={pose[:3]}")
-                
-                solution, status = ik_op.process_ik_request(pose)
-                
-                # Send status
-                status_bytes = json.dumps(status).encode('utf-8')
-                node.send_output("ik_status", pa.array(list(status_bytes), type=pa.uint8()))
-                
-                # Send solution if successful
-                if solution is not None:
-                    node.send_output(
-                        "ik_solution",
-                        pa.array(solution, type=pa.float32()),
-                        metadata={"encoding": "jointstate", "success": True}
-                    )
-                    print(f"[IK] SUCCESS: Solution found, error={status['error']:.6f}")
-                else:
-                    print(f"[IK] FAILED: {status['message']}")
+                try:
+                    value = event["value"]
+                    # Check if this is a JSON dual-arm request
+                    if hasattr(value, 'to_pylist'):
+                        raw = bytes(value.to_pylist())
+                    elif hasattr(value, 'to_numpy'):
+                        raw = value.to_numpy()
+                    else:
+                        raw = value
+
+                    # Try JSON parse for dual-arm request
+                    dual_request = None
+                    if isinstance(raw, (bytes, bytearray)):
+                        try:
+                            dual_request = json.loads(raw.decode('utf-8'))
+                        except (json.JSONDecodeError, UnicodeDecodeError):
+                            pass
+
+                    if dual_request and ("left_pose" in dual_request or "right_pose" in dual_request):
+                        # Dual IK request
+                        print(f"[IK] Dual request #{ik_op.request_count + 1}")
+                        result = {"success": True}
+                        combined_solution = []
+
+                        for arm_key in ("left_pose", "right_pose"):
+                            if arm_key in dual_request:
+                                pose = np.array(dual_request[arm_key], dtype=np.float32)
+                                solution, status = ik_op.process_ik_request(pose)
+                                joint_key = arm_key.replace("_pose", "_joints")
+                                if solution is not None:
+                                    result[joint_key] = solution.tolist() if hasattr(solution, 'tolist') else list(solution)
+                                    combined_solution.extend(result[joint_key])
+                                else:
+                                    result["success"] = False
+                                    result["error"] = status.get("message", "IK failed")
+                                    break
+
+                        result_bytes = json.dumps(result).encode('utf-8')
+                        node.send_output("ik_status", pa.array(list(result_bytes), type=pa.uint8()))
+
+                        if result["success"] and combined_solution:
+                            node.send_output(
+                                "ik_solution",
+                                pa.array(np.array(combined_solution, dtype=np.float32), type=pa.float32()),
+                                metadata={"encoding": "jointstate", "success": True, "dual": True}
+                            )
+                            print(f"[IK] Dual SUCCESS")
+                        else:
+                            print(f"[IK] Dual FAILED: {result.get('error', 'unknown')}")
+                    else:
+                        # Single-arm IK request (original path)
+                        if isinstance(raw, np.ndarray):
+                            pose = raw
+                        else:
+                            pose = event["value"].to_numpy()
+
+                        print(f"[IK] Request #{ik_op.request_count + 1}: target={pose[:3]}")
+
+                        solution, status = ik_op.process_ik_request(pose)
+
+                        status_bytes = json.dumps(status).encode('utf-8')
+                        node.send_output("ik_status", pa.array(list(status_bytes), type=pa.uint8()))
+
+                        if solution is not None:
+                            node.send_output(
+                                "ik_solution",
+                                pa.array(solution, type=pa.float32()),
+                                metadata={"encoding": "jointstate", "success": True}
+                            )
+                            print(f"[IK] SUCCESS: Solution found, error={status['error']:.6f}")
+                        else:
+                            print(f"[IK] FAILED: {status['message']}")
+                except Exception as e:
+                    print(f"[IK] Error processing request: {e}")
+                    import traceback
+                    traceback.print_exc()
                     
         elif event_type == "STOP":
             print("IK operator stopping...")

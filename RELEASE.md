@@ -1,5 +1,28 @@
 # Release Notes
 
+## v0.5.0 — Dual-Arm Coordination & Course Gap Analysis
+
+### New Features
+- **`course/` directory**: 8-chapter gap analysis mapping ROS2 MoveIt2 dual-arm manipulation course to dora-moveit2, with development roadmap
+- **`DualArmConfig` protocol** (`config.py`): Optional multi-arm fields (`ARM_CHAINS`, `ARM_BASE_TRANSFORMS`, per-chain transforms/limits/poses) with backward-compatible helpers `is_dual_arm()` and `get_arm_config()`
+- **Inter-arm collision detection** (`collision_lib.py`): `check_inter_arm_collision()` checks all left×right link pairs
+- **14D motion planner** (`planner_ompl_with_collision_op.py`): Dual-arm mode via `{"mode": "dual_arm"}` in plan request, concatenated 14D joint space
+- **Dual trajectory executor** (`trajectory_executor.py`): Detects dual-arm config, extracts per-chain joints, outputs 14D commands
+- **Dual IK solver** (`ik_op.py`): Accepts JSON `{"left_pose": [6D], "right_pose": [6D]}` requests, solves per-arm, returns combined solution
+- **`DualMoveGroup` API** (`workflow/dual_move_group.py`): High-level dual-arm interface with `go()`, `go_left()`, `go_right()`, `set_named_target()`, and scene access
+- **Dual GEN72 example** (`examples/dual_gen72/`): Complete example with MuJoCo model (two GEN72 arms on table), config, dataflow, and pick-and-place demo
+
+### Bug Fixes
+- Fixed `collision_lib.py` `is_state_valid()` referencing non-existent `result.link1`/`result.link2`/`result.object_name` — corrected to `result.object_a`/`result.object_b`
+
+### Library Changes
+- `config.py`: Added `DualArmConfig` protocol, `is_dual_arm()`, `get_arm_config()` (backward compatible)
+- `collision_lib.py`: Added `check_inter_arm_collision()` method, fixed attribute bugs
+- `planning_scene_op.py`: `RobotState` gains `joint_positions_per_chain`, `update_robot_state()` gains `chain_name` param, dual-arm qpos extraction in `main()`
+- `planner_ompl_with_collision_op.py`: Dual-arm mode support with 14D planning, `_setup_dual_robot()`, dynamic metadata
+- `trajectory_executor.py`: Dual-arm initialization, per-chain joint extraction, 14D idle home config
+- `ik_op.py`: JSON dual-arm request parsing alongside single-arm path
+
 ## v0.4.0 — LeKiwi Pick-and-Place Demo
 
 ### New Features

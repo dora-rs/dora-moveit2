@@ -1,0 +1,151 @@
+<mujoco model="DualGEN72">
+  <compiler angle="radian" meshdir="../../move_group_demo/models/GEN72/urdf/gen_72_b_description/meshes"/>
+
+  <option gravity="0 0 -9.81" timestep="0.001"/>
+
+  <visual>
+    <headlight ambient="0.5 0.5 0.5" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3"/>
+    <scale framewidth="0.01" framelength="0.3"/>
+  </visual>
+
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" width="512" height="512"
+             rgb1="0.2 0.3 0.4" rgb2="0.3 0.4 0.5"/>
+    <material name="grid" texture="grid" texrepeat="10 10" reflectance="0.1"/>
+    <material name="table_mat" rgba="0.6 0.4 0.2 1"/>
+    <material name="ball_mat" rgba="1 0.2 0.2 1"/>
+    <material name="plate_mat" rgba="0.2 0.8 0.2 1"/>
+    <mesh name="base_link" content_type="model/stl" file="base_link.STL"/>
+    <mesh name="Link1" content_type="model/stl" file="Link1.STL"/>
+    <mesh name="Link2" content_type="model/stl" file="Link2.STL"/>
+    <mesh name="Link3" content_type="model/stl" file="Link3.STL"/>
+    <mesh name="Link4" content_type="model/stl" file="Link4.STL"/>
+    <mesh name="Link5" content_type="model/stl" file="Link5.STL"/>
+    <mesh name="Link6" content_type="model/stl" file="Link6.STL"/>
+    <mesh name="Link7" content_type="model/stl" file="Link7.STL"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 3" dir="0 0 -1" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3"/>
+    <light pos="2 2 3" dir="-1 -1 -1" diffuse="0.5 0.5 0.5"/>
+    <geom name="floor" type="plane" size="3 3 0.1" material="grid"/>
+
+    <!-- Table -->
+    <body name="table" pos="0 0 0.4">
+      <geom name="table_top" type="box" size="0.6 0.4 0.02" pos="0 0 0.38" material="table_mat"/>
+      <geom name="table_leg1" type="cylinder" size="0.03 0.19" pos="-0.5 -0.35 0.19" rgba="0.5 0.3 0.2 1"/>
+      <geom name="table_leg2" type="cylinder" size="0.03 0.19" pos="0.5 -0.35 0.19" rgba="0.5 0.3 0.2 1"/>
+      <geom name="table_leg3" type="cylinder" size="0.03 0.19" pos="-0.5 0.35 0.19" rgba="0.5 0.3 0.2 1"/>
+      <geom name="table_leg4" type="cylinder" size="0.03 0.19" pos="0.5 0.35 0.19" rgba="0.5 0.3 0.2 1"/>
+    </body>
+
+    <!-- ========== LEFT ARM (at x=-0.3, on table at z=0.8) ========== -->
+    <body name="left_base" pos="-0.3 0 0.8">
+      <geom type="mesh" rgba="0.8 0.8 1.0 1" mesh="base_link"/>
+      <body name="left_Link1" pos="0 0 0.218">
+        <inertial pos="0 0 -0.047" mass="0.511" diaginertia="0.001 0.001 0.0004"/>
+        <joint name="left_joint1" pos="0 0 0" axis="0 0 1" range="-3.0014 3.0014" actuatorfrcrange="-25 25"/>
+        <geom type="mesh" rgba="0.8 0.8 1.0 1" mesh="Link1"/>
+        <body name="left_Link2" quat="0.707105 -0.707108 0 0">
+          <inertial pos="0 -0.058 0" mass="0.552" diaginertia="0.0014 0.0013 0.0005"/>
+          <joint name="left_joint2" pos="0 0 0" axis="0 0 1" range="-1.8323 1.8323" actuatorfrcrange="-25 25"/>
+          <geom type="mesh" rgba="0.8 0.8 1.0 1" mesh="Link2"/>
+          <body name="left_Link3" pos="0 -0.28 0" quat="0.707105 0.707108 0 0">
+            <inertial pos="0.009 0 -0.074" mass="0.774" diaginertia="0.0026 0.0025 0.0008"/>
+            <joint name="left_joint3" pos="0 0 0" axis="0 0 1" range="-3.0014 3.0014" actuatorfrcrange="-25 25"/>
+            <geom type="mesh" rgba="0.8 0.8 1.0 1" mesh="Link3"/>
+            <body name="left_Link4" pos="0.04 0 0" quat="0.707105 0.707108 0 0">
+              <inertial pos="-0.010 0.035 0" mass="0.437" diaginertia="0.001 0.0009 0.0002"/>
+              <joint name="left_joint4" pos="0 0 0" axis="0 0 1" range="-2.8792 0.9597" actuatorfrcrange="-25 25"/>
+              <geom type="mesh" rgba="0.8 0.8 1.0 1" mesh="Link4"/>
+              <body name="left_Link5" pos="-0.019 0.2525 0" quat="0.707105 -0.707108 0 0">
+                <inertial pos="0 0 -0.067" mass="0.424" diaginertia="0.0011 0.001 0.0003"/>
+                <joint name="left_joint5" pos="0 0 0" axis="0 0 1" range="-3.0014 3.0014" actuatorfrcrange="-5 5"/>
+                <geom type="mesh" rgba="0.8 0.8 1.0 1" mesh="Link5"/>
+                <body name="left_Link6" quat="0.707105 0.707108 0 0">
+                  <inertial pos="0.002 0.038 0" mass="0.303" diaginertia="0.00016 0.00014 0.00013"/>
+                  <joint name="left_joint6" pos="0 0 0" axis="0 0 1" range="-1.707 1.783" actuatorfrcrange="-5 5"/>
+                  <geom type="mesh" rgba="0.8 0.8 1.0 1" mesh="Link6"/>
+                  <body name="left_Link7" pos="0.0905 0.067 0" quat="0.499998 0.5 0.500002 0.5">
+                    <inertial pos="0 0 -0.029" mass="0.177" diaginertia="8.5e-05 6.2e-05 6.2e-05"/>
+                    <joint name="left_joint7" pos="0 0 0" axis="0 0 1" range="-3.0014 3.0014" actuatorfrcrange="-5 5"/>
+                    <geom type="mesh" rgba="0.8 0.8 1.0 1" mesh="Link7"/>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+
+    <!-- ========== RIGHT ARM (at x=0.3, rotated 180° about Z, on table at z=0.8) ========== -->
+    <body name="right_base" pos="0.3 0 0.8" quat="0 0 0 1">
+      <geom type="mesh" rgba="1.0 0.8 0.8 1" mesh="base_link"/>
+      <body name="right_Link1" pos="0 0 0.218">
+        <inertial pos="0 0 -0.047" mass="0.511" diaginertia="0.001 0.001 0.0004"/>
+        <joint name="right_joint1" pos="0 0 0" axis="0 0 1" range="-3.0014 3.0014" actuatorfrcrange="-25 25"/>
+        <geom type="mesh" rgba="1.0 0.8 0.8 1" mesh="Link1"/>
+        <body name="right_Link2" quat="0.707105 -0.707108 0 0">
+          <inertial pos="0 -0.058 0" mass="0.552" diaginertia="0.0014 0.0013 0.0005"/>
+          <joint name="right_joint2" pos="0 0 0" axis="0 0 1" range="-1.8323 1.8323" actuatorfrcrange="-25 25"/>
+          <geom type="mesh" rgba="1.0 0.8 0.8 1" mesh="Link2"/>
+          <body name="right_Link3" pos="0 -0.28 0" quat="0.707105 0.707108 0 0">
+            <inertial pos="0.009 0 -0.074" mass="0.774" diaginertia="0.0026 0.0025 0.0008"/>
+            <joint name="right_joint3" pos="0 0 0" axis="0 0 1" range="-3.0014 3.0014" actuatorfrcrange="-25 25"/>
+            <geom type="mesh" rgba="1.0 0.8 0.8 1" mesh="Link3"/>
+            <body name="right_Link4" pos="0.04 0 0" quat="0.707105 0.707108 0 0">
+              <inertial pos="-0.010 0.035 0" mass="0.437" diaginertia="0.001 0.0009 0.0002"/>
+              <joint name="right_joint4" pos="0 0 0" axis="0 0 1" range="-2.8792 0.9597" actuatorfrcrange="-25 25"/>
+              <geom type="mesh" rgba="1.0 0.8 0.8 1" mesh="Link4"/>
+              <body name="right_Link5" pos="-0.019 0.2525 0" quat="0.707105 -0.707108 0 0">
+                <inertial pos="0 0 -0.067" mass="0.424" diaginertia="0.0011 0.001 0.0003"/>
+                <joint name="right_joint5" pos="0 0 0" axis="0 0 1" range="-3.0014 3.0014" actuatorfrcrange="-5 5"/>
+                <geom type="mesh" rgba="1.0 0.8 0.8 1" mesh="Link5"/>
+                <body name="right_Link6" quat="0.707105 0.707108 0 0">
+                  <inertial pos="0.002 0.038 0" mass="0.303" diaginertia="0.00016 0.00014 0.00013"/>
+                  <joint name="right_joint6" pos="0 0 0" axis="0 0 1" range="-1.707 1.783" actuatorfrcrange="-5 5"/>
+                  <geom type="mesh" rgba="1.0 0.8 0.8 1" mesh="Link6"/>
+                  <body name="right_Link7" pos="0.0905 0.067 0" quat="0.499998 0.5 0.500002 0.5">
+                    <inertial pos="0 0 -0.029" mass="0.177" diaginertia="8.5e-05 6.2e-05 6.2e-05"/>
+                    <joint name="right_joint7" pos="0 0 0" axis="0 0 1" range="-3.0014 3.0014" actuatorfrcrange="-5 5"/>
+                    <geom type="mesh" rgba="1.0 0.8 0.8 1" mesh="Link7"/>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+
+    <!-- Shared workspace objects -->
+    <body name="ball" pos="0 0.1 0.83">
+      <freejoint name="ball_joint"/>
+      <geom name="ball_geom" type="sphere" size="0.025" material="ball_mat" mass="0.05"/>
+    </body>
+
+    <body name="plate" pos="0 -0.1 0.82">
+      <geom name="plate_geom" type="cylinder" size="0.06 0.005" material="plate_mat" mass="0.1"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- Left arm actuators (indices 0-6) -->
+    <position name="left_actuator_joint1" joint="left_joint1" kp="100" ctrlrange="-3.0014 3.0014"/>
+    <position name="left_actuator_joint2" joint="left_joint2" kp="100" ctrlrange="-1.8323 1.8323"/>
+    <position name="left_actuator_joint3" joint="left_joint3" kp="100" ctrlrange="-3.0014 3.0014"/>
+    <position name="left_actuator_joint4" joint="left_joint4" kp="100" ctrlrange="-2.8792 0.9597"/>
+    <position name="left_actuator_joint5" joint="left_joint5" kp="50" ctrlrange="-3.0014 3.0014"/>
+    <position name="left_actuator_joint6" joint="left_joint6" kp="50" ctrlrange="-1.707 1.783"/>
+    <position name="left_actuator_joint7" joint="left_joint7" kp="50" ctrlrange="-3.0014 3.0014"/>
+    <!-- Right arm actuators (indices 7-13) -->
+    <position name="right_actuator_joint1" joint="right_joint1" kp="100" ctrlrange="-3.0014 3.0014"/>
+    <position name="right_actuator_joint2" joint="right_joint2" kp="100" ctrlrange="-1.8323 1.8323"/>
+    <position name="right_actuator_joint3" joint="right_joint3" kp="100" ctrlrange="-3.0014 3.0014"/>
+    <position name="right_actuator_joint4" joint="right_joint4" kp="100" ctrlrange="-2.8792 0.9597"/>
+    <position name="right_actuator_joint5" joint="right_joint5" kp="50" ctrlrange="-3.0014 3.0014"/>
+    <position name="right_actuator_joint6" joint="right_joint6" kp="50" ctrlrange="-1.707 1.783"/>
+    <position name="right_actuator_joint7" joint="right_joint7" kp="50" ctrlrange="-3.0014 3.0014"/>
+  </actuator>
+</mujoco>
