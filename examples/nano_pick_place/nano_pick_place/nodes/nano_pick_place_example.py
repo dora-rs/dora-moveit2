@@ -36,26 +36,27 @@ def main():
     print("=" * 60)
 
     # Joint configs found via FK scan of the MuJoCo model:
-    #   Ball at world [-0.025, 0.17, 0.055] (red sphere on chassis)
-    #   Plate at world [0.10, 0.09, 0.04] (green cylinder to the right)
+    #   Ball at world [-0.04, 0.25, 0.06] (red sphere, far front-left)
+    #   Plate at world [0.10, 0.25, 0.04] (green cylinder, far front-right)
+    #   ~14cm separation between ball and plate
     #
-    # Pick configs (gripper reaches ~[-0.011, 0.17, 0.054]):
-    #   q = [0.13, 0.39, -1.18, 1.5, 0, gripper]
-    # Place configs (gripper reaches ~[0.10, 0.084, 0.049]):
-    #   q = [-1.97, 0.13, -1.45, 0, 0, gripper]
+    # Pick configs (gripper reaches ~[-0.037, 0.25, 0.063]):
+    #   q = [-0.069, 1.158, -1.553, 1.5, 0, gripper]
+    # Place configs (gripper reaches ~[0.101, 0.251, 0.057]):
+    #   q = [0.621, 2.0, -1.868, -0.136, 0, gripper]
 
     GRIPPER_OPEN = 0.0
     GRIPPER_CLOSED = 0.5
 
     # Joint goals for pick sequence
-    pick_above = [0.13, 0.20, -0.80, 1.0, 0.0, GRIPPER_OPEN]   # above ball
-    pick_grasp = [0.13, 0.39, -1.18, 1.5, 0.0, GRIPPER_OPEN]   # at ball height
-    pick_lift  = [0.13, 0.20, -0.80, 1.0, 0.0, GRIPPER_CLOSED]  # lift up
+    pick_above = [-0.069, 0.60, -0.80, 0.5, 0.0, GRIPPER_OPEN]        # above ball
+    pick_grasp = [-0.069, 1.158, -1.553, 1.5, 0.0, GRIPPER_OPEN]      # at ball
+    pick_lift  = [-0.069, 0.60, -0.80, 0.5, 0.0, GRIPPER_CLOSED]      # lift up
 
     # Joint goals for place sequence
-    place_above = [-1.97, 0.00, -1.00, 0.5, 0.0, GRIPPER_CLOSED]  # above plate
-    place_lower = [-1.97, 0.13, -1.45, 0.0, 0.0, GRIPPER_CLOSED]  # at plate
-    place_retreat = [-1.97, 0.00, -1.00, 0.5, 0.0, GRIPPER_OPEN]  # retreat up
+    place_above = [0.621, 1.00, -1.00, 0.0, 0.0, GRIPPER_CLOSED]      # above plate
+    place_lower = [0.621, 2.00, -1.868, -0.136, 0.0, GRIPPER_CLOSED]  # at plate
+    place_retreat = [0.621, 1.00, -1.00, 0.0, 0.0, GRIPPER_OPEN]      # retreat up
 
     # =========================================================
     # 1. Home position

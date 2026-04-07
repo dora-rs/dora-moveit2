@@ -1,5 +1,13 @@
 # Release Notes
 
+## v0.3.8 — Ball & Plate Farther from Body, Doubled Ball Size
+
+### Changes
+- **Ball far front-left**: Repositioned to [-0.04, 0.25, 0.06] — much farther from body
+- **Plate far front-right**: Repositioned to [0.10, 0.25, 0.04] — ~14cm separation from ball
+- **Ball doubled in size**: Sphere radius increased from 0.012 to 0.024
+- **Updated joint configs**: Pick q=[-0.069, 1.158, -1.553, 1.5, 0, 0], Place q=[0.621, 2.0, -1.868, -0.136, 0, 0]
+
 ## v0.3.7 — Nano Pick-and-Place with Joint-Space Goals
 
 ### Changes
