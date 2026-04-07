@@ -34,29 +34,25 @@ def main():
     print("=" * 60)
 
     # Joint configs found via FK scan of the MuJoCo model:
-    #   Ball at world [0.30, 0.0, 0.024] (far in front)
-    #   Plate at world [0.30, -0.18, 0.003] (right side, next to ball)
+    #   Ball on pedestal at [0.30, 0.0, 0.174]
+    #   Plate on pedestal at [0.30, -0.18, 0.153]
     #
-    # Pick config: approach [-0.99, 0, 0.11] — reaches straight forward
-    #   with jaw opening perpendicular, ball enters between open jaws
-    #   q = [0.0, 1.7, -0.282, -1.309, 0.449, open]
-    #   gripper center at [0.304, 0.004, 0.002]
-    #
-    # Place config: q = [0.633, 1.7, -0.847, -0.436, -2.243, closed]
-    #   gripper center at [0.300, -0.181, 0.001]
+    # Top-down approach: gripper points downward, moves above then lowers
+    #   pick_above z~0.34, pick_grasp z~0.18
+    #   place_above z~0.34, place_lower z~0.18
 
     GRIPPER_OPEN = 0.0
     GRIPPER_CLOSED = 0.55
 
-    # Joint goals for pick sequence — approach from behind with open jaws
-    pick_above = [0.0, 0.8, -0.3, -0.5, 0.449, GRIPPER_OPEN]           # retracted, above
-    pick_grasp = [0.0, 1.7, -0.282, -1.309, 0.449, GRIPPER_OPEN]       # at ball, jaws open
-    pick_lift  = [0.0, 0.8, -0.3, -0.5, 0.449, GRIPPER_CLOSED]         # lift up
+    # Pick: move above ball, lower down, grasp, lift
+    pick_above = [0.053, 0.825, -1.1, -1.65, 1.346, GRIPPER_OPEN]      # z~0.34, above ball
+    pick_grasp = [0.053, 0.417, 0.688, -1.65, 2.243, GRIPPER_OPEN]     # z~0.18, at ball
+    pick_lift  = [0.053, 0.825, -1.1, -1.65, 1.346, GRIPPER_CLOSED]    # z~0.34, lift up
 
-    # Joint goals for place sequence
-    place_above = [0.633, 0.8, -0.5, -0.3, -2.243, GRIPPER_CLOSED]     # above plate
-    place_lower = [0.633, 1.7, -0.847, -0.436, -2.243, GRIPPER_CLOSED] # at plate
-    place_retreat = [0.633, 0.8, -0.5, -0.3, -2.243, GRIPPER_OPEN]     # retreat up
+    # Place: move above plate, lower down, release, retreat
+    place_above = [0.684, 1.058, -1.65, -0.434, 2.243, GRIPPER_CLOSED]  # z~0.34, above plate
+    place_lower = [0.684, 1.0, -0.275, -1.65, 2.243, GRIPPER_CLOSED]    # z~0.18, at plate
+    place_retreat = [0.684, 1.058, -1.65, -0.434, 2.243, GRIPPER_OPEN]  # z~0.34, retreat up
 
     # =========================================================
     # 1. Home position

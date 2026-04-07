@@ -20,15 +20,25 @@
     <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
     <geom name="floor" pos="0 0 -0.1" size="0 0 0.05" type="plane" material="groundplane"/>
     
-    <!-- Pick-and-place target: red ball far in front of robot -->
-    <body name="target_object" pos="0.30 0.0 0.024">
+    <!-- Pick pedestal: small table to raise ball to arm-reachable height -->
+    <geom name="pick_table" type="cylinder" size="0.04 0.075"
+          pos="0.30 0.0 0.075" rgba="0.6 0.6 0.6 1"
+          mass="1.0" contype="1" conaffinity="1"/>
+
+    <!-- Pick-and-place target: red ball on top of pedestal -->
+    <body name="target_object" pos="0.30 0.0 0.174">
       <joint type="free"/>
       <geom name="red_ball" type="sphere" size="0.024" rgba="1 0 0 1" mass="0.005"/>
     </body>
 
-    <!-- Place target: green plate to the right of ball, same distance from body -->
+    <!-- Place pedestal: to the right of ball -->
+    <geom name="place_table" type="cylinder" size="0.04 0.075"
+          pos="0.30 -0.18 0.075" rgba="0.6 0.6 0.6 1"
+          mass="1.0" contype="1" conaffinity="1"/>
+
+    <!-- Place target: green plate on top of place pedestal -->
     <geom name="place_plate" type="cylinder" size="0.04 0.003"
-          pos="0.30 -0.18 0.003" rgba="0.2 0.8 0.2 1"
+          pos="0.30 -0.18 0.153" rgba="0.2 0.8 0.2 1"
           mass="0.1" contype="1" conaffinity="1"/>
     
   </worldbody>

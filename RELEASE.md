@@ -6,12 +6,13 @@
 - **LeKiwi example** (`examples/lekiwi_pick_place/`): Full MoveGroup API demo for the SO_ARM100 6-DOF arm on LeKiwi omnidirectional mobile base
 - **Third-party MJCF model**: Uses SIGRobotics-UIUC/LeKiwi-sim MuJoCo model (Apache 2.0) with modular `<attach>` composition
 - **`ARM_ACTUATOR_START` config field**: Trajectory executor pads arm commands into full actuator array, supporting robots with non-arm actuators before arm actuators (e.g., wheel velocity actuators)
+- **Top-down pick-and-place**: Ball and plate on pedestals at arm-reachable height; gripper approaches from above, lowers to grasp/place, lifts back up — natural motion path
 
 ### Model Details
 - 3 omni wheel velocity actuators + 6 arm position actuators (9 total)
 - 2 cameras (front + wrist)
 - qpos layout: freejoint[0:7], wheels[7:10], arm[10:16]
-- Proper grasp angle: gripper approaches ball horizontally with jaw opening perpendicular, ball enters between open jaws
+- Ball on pedestal at [0.30, 0, 0.174], plate on pedestal at [0.30, -0.18, 0.153]
 
 ### Library Changes
 - `trajectory_executor.py`: Added `_pad_arm_command()` helper and `ARM_ACTUATOR_START`/`NUM_ACTUATORS` config support (backward-compatible)
