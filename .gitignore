@@ -14,6 +14,11 @@ build/
 
 # Claude Code
 CLAUDE.md
+.claude/
+
+# Planning / course notes — not part of the repo
+course/
+docs/
 
 # IDE
 .vscode/
