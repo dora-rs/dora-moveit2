@@ -183,20 +183,21 @@ export PYTHONPATH=/Users/nupylot/Public/github_dora_nav_moveit/dora-moveit2/dora
 
 ## Quick Reference — Every Dataflow
 
-| # | Example | Dataflow | Robot |
-|---|---------|----------|-------|
-| 1 | move_group_demo   | `dataflows/ur5e_example_mujoco.yml`     | UR5e 6-DOF + Robotiq 2F-85 |
-| 2 | move_group_demo   | `dataflows/moveit_example_mujoco.yml`   | GEN72 7-DOF |
-| 3 | hunter_with_arm   | `dataflows/movegroup_mujoco.yml`        | Hunter SE + GEN72 |
-| 4 | hunter_with_arm   | `dataflows/hunter_arm_mujoco.yml`       | Hunter SE + GEN72 (multi-view) |
-| 5 | hunter_with_arm   | `dataflows/gen72_mujoco.yml`            | GEN72 standalone |
-| 6 | hunter_with_arm   | `dataflows/gen72_real.yml`              | Physical GEN72 (hardware) |
-| 7 | dual_gen72        | `dataflows/dual_gen72_mujoco.yml`       | Dual GEN72 (14-DOF) |
-| 8 | lekiwi_pick_place | `dataflows/lekiwi_pick_place_mujoco.yml`| LeKiwi + SO_ARM100 |
-| 9 | nano_pick_place   | `dataflows/nano_pick_place_mujoco.yml`  | ADORA1 Nano 6-DOF |
-| 11| move_group_demo   | `dataflows/single_arm_grasping_mujoco.yml`  | GEN72 — Course Ch6.4 |
-| 12| move_group_demo   | `dataflows/single_arm_avoidance_mujoco.yml` | GEN72 — Course Ch6.5 |
-| 13| dual_gen72        | `dataflows/dual_gen72_real.yml`             | Dual GEN72 physical — ⚠ template, requires hardware + SDK |
+| #  | Example | Dataflow / Script | Robot |
+|----|---------|-------------------|-------|
+| 1  | move_group_demo   | `dataflows/ur5e_example_mujoco.yml`         | UR5e 6-DOF + Robotiq 2F-85 |
+| 2  | move_group_demo   | `dataflows/moveit_example_mujoco.yml`       | GEN72 7-DOF — Course Ch1, Ch5 |
+| 3  | move_group_demo   | `models/pick_and_place_demo.py` (mjpython)  | UR5e standalone (no dora) |
+| 4  | hunter_with_arm   | `dataflows/movegroup_mujoco.yml`            | Hunter SE + GEN72 |
+| 5  | hunter_with_arm   | `dataflows/hunter_arm_mujoco.yml`           | Hunter SE + GEN72 (multi-view) |
+| 6  | hunter_with_arm   | `dataflows/gen72_mujoco.yml`                | GEN72 standalone |
+| 7  | hunter_with_arm   | `dataflows/gen72_real.yml`                  | Physical GEN72 (hardware) |
+| 8  | dual_gen72        | `dataflows/dual_gen72_mujoco.yml`           | Dual GEN72 (14-DOF) — Course Ch7, Ch8 |
+| 9  | lekiwi_pick_place | `dataflows/lekiwi_pick_place_mujoco.yml`    | LeKiwi + SO_ARM100 |
+| 10 | nano_pick_place   | `dataflows/nano_pick_place_mujoco.yml`      | ADORA1 Nano 6-DOF |
+| 11 | move_group_demo   | `dataflows/single_arm_grasping_mujoco.yml`  | GEN72 — Course Ch6.4 |
+| 12 | move_group_demo   | `dataflows/single_arm_avoidance_mujoco.yml` | GEN72 — Course Ch6.5 |
+| 13 | dual_gen72        | `dataflows/dual_gen72_real.yml`             | Dual GEN72 physical — ⚠ template, requires hardware + SDK |
 
 ## Troubleshooting
 
