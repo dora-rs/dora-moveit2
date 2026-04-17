@@ -87,7 +87,7 @@ nodes:
   # Dual-Arm Demo (user application)
   # ===========================================
   - id: user_node
-    path: ../dual_gen72_demo/nodes/dual_arm_example.py
+    path: ../dual_gen72_demo/nodes/dual_arm_final_demo.py
     env:
       ROBOT_CONFIG_MODULE: "dual_gen72_demo.config.dual_gen72"
     inputs:
