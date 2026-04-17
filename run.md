@@ -158,6 +158,17 @@ dora stop
 
 **No hot reload.** After every edit: `Ctrl+C` → `dora stop` → relaunch with `dora start`.
 
+## 13. Dual GEN72 — Real Hardware Template (Course Ch8.6)
+
+> ⚠ **Hardware required — template only.** Does **not** run in simulation. Fails loudly at startup until you (1) install the Realman SDK, (2) fill in the stub driver at `examples/dual_gen72/dual_gen72_demo/nodes/realman_dual_driver.py`, and (3) set `GEN72_LEFT_IP` / `GEN72_RIGHT_IP` in the YAML.
+
+```bash
+cd /Users/nupylot/Public/github_dora_nav_moveit/dora-moveit2/examples/dual_gen72
+dora up
+dora start dataflows/dual_gen72_real.yml
+dora stop
+```
+
 ## Alternative: PYTHONPATH instead of `pip install -e`
 
 ```bash
@@ -185,6 +196,7 @@ export PYTHONPATH=/Users/nupylot/Public/github_dora_nav_moveit/dora-moveit2/dora
 | 9 | nano_pick_place   | `dataflows/nano_pick_place_mujoco.yml`  | ADORA1 Nano 6-DOF |
 | 11| move_group_demo   | `dataflows/single_arm_grasping_mujoco.yml`  | GEN72 — Course Ch6.4 |
 | 12| move_group_demo   | `dataflows/single_arm_avoidance_mujoco.yml` | GEN72 — Course Ch6.5 |
+| 13| dual_gen72        | `dataflows/dual_gen72_real.yml`             | Dual GEN72 physical — ⚠ template, requires hardware + SDK |
 
 ## Troubleshooting
 
