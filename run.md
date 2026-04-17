@@ -121,6 +121,24 @@ dora start dataflows/nano_pick_place_mujoco.yml
 dora stop
 ```
 
+## 11. GEN72 Single-Arm Grasping — Course Ch6.4
+
+```bash
+cd /Users/nupylot/Public/github_dora_nav_moveit/dora-moveit2/examples/move_group_demo
+dora up
+dora start dataflows/single_arm_grasping_mujoco.yml
+dora stop
+```
+
+## 12. GEN72 Single-Arm Avoidance — Course Ch6.5
+
+```bash
+cd /Users/nupylot/Public/github_dora_nav_moveit/dora-moveit2/examples/move_group_demo
+dora up
+dora start dataflows/single_arm_avoidance_mujoco.yml
+dora stop
+```
+
 ## Alternative: PYTHONPATH instead of `pip install -e`
 
 ```bash
@@ -146,6 +164,8 @@ export PYTHONPATH=/Users/nupylot/Public/github_dora_nav_moveit/dora-moveit2/dora
 | 7 | dual_gen72        | `dataflows/dual_gen72_mujoco.yml`       | Dual GEN72 (14-DOF) |
 | 8 | lekiwi_pick_place | `dataflows/lekiwi_pick_place_mujoco.yml`| LeKiwi + SO_ARM100 |
 | 9 | nano_pick_place   | `dataflows/nano_pick_place_mujoco.yml`  | ADORA1 Nano 6-DOF |
+| 11| move_group_demo   | `dataflows/single_arm_grasping_mujoco.yml`  | GEN72 — Course Ch6.4 |
+| 12| move_group_demo   | `dataflows/single_arm_avoidance_mujoco.yml` | GEN72 — Course Ch6.5 |
 
 ## Troubleshooting
 
