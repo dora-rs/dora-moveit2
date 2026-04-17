@@ -24,11 +24,13 @@ from dora import Node
 try:
     # Reuse the single-arm Realman SDK wrapper.
     from hunter_arm_demo.robot_control.rm_robot_interface import RoboticArm
-except ImportError as e:
+except Exception as e:
+    # Catches both ImportError (package missing) and errors raised while
+    # loading the Realman ctypes wrapper (e.g. missing native .so/.dll).
     raise RuntimeError(
         "Realman SDK wrapper not importable. Install examples/hunter_with_arm/ "
-        "or place rm_robot_interface.py on PYTHONPATH. Original error: "
-        f"{e}"
+        "and ensure the Realman native library is available, or place "
+        f"rm_robot_interface.py on PYTHONPATH. Original error: {type(e).__name__}: {e}"
     )
 
 
