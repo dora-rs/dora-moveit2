@@ -139,6 +139,25 @@ dora start dataflows/single_arm_avoidance_mujoco.yml
 dora stop
 ```
 
+## Write Your Own MoveGroup Script (Course Ch5 / Ch6)
+
+For students who want to run custom code (as the course shows in Ch5 and Ch6), edit this file:
+
+```
+examples/move_group_demo/move_group_demo/nodes/my_custom_demo.py
+```
+
+Then launch the custom dataflow:
+
+```bash
+cd /Users/nupylot/Public/github_dora_nav_moveit/dora-moveit2/examples/move_group_demo
+dora up
+dora start dataflows/custom_demo_mujoco.yml
+dora stop
+```
+
+**No hot reload.** After every edit: `Ctrl+C` → `dora stop` → relaunch with `dora start`.
+
 ## Alternative: PYTHONPATH instead of `pip install -e`
 
 ```bash
