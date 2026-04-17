@@ -1102,6 +1102,8 @@ dora start dataflows/dual_gen72_mujoco.yml
   path: ../dual_gen72_demo/nodes/realman_driver.py
 ```
 
+> 💡 双臂硬件模板已就位：参见 `examples/dual_gen72/dataflows/dual_gen72_real.yml` 及 `examples/dual_gen72/dual_gen72_demo/nodes/realman_dual_driver.py`。该模板复用单臂 `hunter_with_arm` 的 Realman SDK 封装，需要硬件和 SDK 才能运行。
+
 ## 8.7 课程总结
 
 各位同学，我们的Dora-MoveIt2 + GEN72双臂机器人精简课程就结束了。回顾一下：
