@@ -1,5 +1,5 @@
 <mujoco model="GEN72">
-  <compiler angle="radian" meshdir="GEN72/urdf/gen_72_b_description/meshes"/>
+  <compiler angle="radian" autolimits="true" meshdir="GEN72/urdf/gen_72_b_description/meshes"/>
 
   <option gravity="0 0 -9.81" timestep="0.001"/>
 
@@ -26,11 +26,11 @@
     <light pos="2 2 3" dir="-1 -1 -1" diffuse="0.5 0.5 0.5"/>
     <geom name="floor" type="plane" size="3 3 0.1" material="grid"/>
 
-    <!-- World coordinate frame -->
+    <!-- World coordinate frame (visual only, no collision) -->
     <body name="world_frame" pos="0 0 0">
-      <geom type="cylinder" size="0.005 0.15" pos="0.15 0 0" quat="0.707107 0 0.707107 0" rgba="1 0 0 1"/>
-      <geom type="cylinder" size="0.005 0.15" pos="0 0.15 0" quat="0.707107 -0.707107 0 0" rgba="0 1 0 1"/>
-      <geom type="cylinder" size="0.005 0.15" pos="0 0 0.15" rgba="0 0 1 1"/>
+      <geom type="cylinder" size="0.005 0.15" pos="0.15 0 0" quat="0.707107 0 0.707107 0" rgba="1 0 0 1" contype="0" conaffinity="0"/>
+      <geom type="cylinder" size="0.005 0.15" pos="0 0.15 0" quat="0.707107 -0.707107 0 0" rgba="0 1 0 1" contype="0" conaffinity="0"/>
+      <geom type="cylinder" size="0.005 0.15" pos="0 0 0.15" rgba="0 0 1 1" contype="0" conaffinity="0"/>
     </body>
 
     <!-- Pipe obstacles: 30cm diameter (0.15m radius), 2m length 
@@ -44,6 +44,11 @@
       <geom name="pipe3_geom" type="cylinder" size="0.05 1.0" rgba="0.3 0.3 0.8 1"/>
     </body>
     -->
+
+    <!-- Avoidance demo obstacle (matches single_arm_avoidance.py: pos=[0,0,0.5] size=[0.1,0.1,0.5]) -->
+    <!-- <body name="obstacle_box" pos="0.0 0.0 0.5">
+      <geom name="obstacle_box_geom" type="box" size="0.05 0.05 0.25" rgba="1 0.3 0.3 0.4" contype="0" conaffinity="0"/>
+    </body> -->
 
     <!-- Robot -->
     <geom type="mesh" rgba="1 1 1 1" mesh="base_link"/>

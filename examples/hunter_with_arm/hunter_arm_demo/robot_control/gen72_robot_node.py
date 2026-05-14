@@ -5,6 +5,8 @@ GEN72 Real Robot Control Node
 Controls physical GEN72 robot arm via Realman SDK.
 """
 
+import json
+import threading
 import numpy as np
 import pyarrow as pa
 from dora import Node
@@ -14,8 +16,11 @@ from typing import Optional
 try:
     from hunter_arm_demo.robot_control.rm_robot_interface import *
 except ImportError:
-    print("ERROR: Realman SDK not found")
-    RoboticArm = None
+    try:
+        from Robotic_Arm.rm_robot_interface import *
+    except ImportError:
+        print("ERROR: Realman SDK not found")
+        RoboticArm = None
 
 
 class GEN72RobotNode:
@@ -26,43 +31,39 @@ class GEN72RobotNode:
         self.handle = None
         self.num_joints = 7
         self.current_joints: Optional[np.ndarray] = None
-        self.last_cmd_time = time.time()
-        self.cmd_timeout = 0.2
-        self.target_q = None
+
+        # Trajectory execution state
+        self._traj_lock = threading.Lock()
+        self._traj_thread: Optional[threading.Thread] = None
+        self.is_executing = False
+        self.execution_count = 0
+        self.pending_trajectory: Optional[list] = None  # list of np.ndarray waypoints
 
         self.connect()
 
     def connect(self):
-        """Connect to GEN72 robot"""
         if RoboticArm is None:
             print("ERROR: Realman SDK not available")
             return False
-
         try:
             thread_mode = rm_thread_mode_e(2)
             self.robot = RoboticArm(thread_mode)
             self.handle = self.robot.rm_create_robot_arm("192.168.1.19", 8080, 3)
-
             if self.handle.id == -1:
                 print("Failed to connect to GEN72")
                 return False
-
             print(f"Connected to GEN72: handle {self.handle.id}")
             self.robot.rm_set_arm_power(1)
             time.sleep(0.5)
-
             self.update_joint_state()
             return True
-
         except Exception as e:
             print(f"Connection error: {e}")
             return False
 
     def update_joint_state(self):
-        """Read current joint positions from robot"""
         if self.robot is None:
             return
-
         try:
             result = self.robot.rm_get_current_arm_state()
             if isinstance(result, tuple) and len(result) > 0:
@@ -72,33 +73,51 @@ class GEN72RobotNode:
         except Exception as e:
             print(f"Error reading joints: {e}")
 
-    def apply_control(self, command: np.ndarray):
-        """Send joint command to robot"""
-        if self.robot is None:
-            return
+    def set_trajectory(self, waypoints: list):
+        """Accept a new trajectory (list of np.ndarray joint configs)."""
+        with self._traj_lock:
+            if self.is_executing:
+                # Stop current motion before accepting new trajectory
+                try:
+                    self.robot.rm_set_arm_stop()
+                except Exception:
+                    pass
+            self.pending_trajectory = waypoints
 
-        self.last_cmd_time = time.time()
-        self.target_q = command[:self.num_joints].copy()
+        # Start execution thread
+        t = threading.Thread(target=self._execute_trajectory, daemon=True)
+        t.start()
+        self._traj_thread = t
 
+    def _execute_trajectory(self):
+        with self._traj_lock:
+            waypoints = self.pending_trajectory
+            self.pending_trajectory = None
+            self.is_executing = True
+            self.execution_count += 1
+            count = self.execution_count
+
+        print(f"[Robot] Executing trajectory #{count} with {len(waypoints)} waypoints")
         try:
-            joint_deg = np.rad2deg(command[:self.num_joints]).tolist()
-            self.robot.rm_movej(joint_deg, 10, 0, 0, 1)
+            for i, wp in enumerate(waypoints):
+                joint_deg = np.rad2deg(wp[:self.num_joints]).tolist()
+                # block=1: wait for each waypoint to complete before sending next
+                self.robot.rm_movej(joint_deg, 15, 0, 0, 1)
+                print(f"[Robot] Waypoint {i+1}/{len(waypoints)} reached")
         except Exception as e:
-            print(f"Error sending command: {e}")
+            print(f"[Robot] Trajectory execution error: {e}")
+        finally:
+            with self._traj_lock:
+                self.is_executing = False
+            print(f"[Robot] Trajectory #{count} complete!")
 
-    def hold_position(self):
-        """Hold current position when idle"""
-        now = time.time()
-
-        if self.target_q is None:
-            return
-
-        if now - self.last_cmd_time > self.cmd_timeout:
-            if self.current_joints is not None:
-                self.target_q = self.current_joints.copy()
+    def get_status(self) -> dict:
+        return {
+            "is_executing": self.is_executing,
+            "execution_count": self.execution_count,
+        }
 
     def disconnect(self):
-        """Disconnect from robot"""
         if self.robot:
             self.robot.rm_delete_robot_arm()
             print("Disconnected from GEN72")
@@ -120,12 +139,18 @@ def main():
                 input_id = event["id"]
 
                 if input_id == "control_input":
-                    command = event["value"].to_numpy()
-                    robot_node.apply_control(command)
+                    # Receive full trajectory from trajectory_executor
+                    traj_flat = event["value"].to_numpy()
+                    metadata = event.get("metadata", {})
+                    num_joints = metadata.get("num_joints", robot_node.num_joints)
+                    num_waypoints = metadata.get("num_waypoints", len(traj_flat) // num_joints)
+                    if num_waypoints > 0 and len(traj_flat) >= num_waypoints * num_joints:
+                        traj = traj_flat.reshape(num_waypoints, num_joints)
+                        waypoints = [traj[i] for i in range(num_waypoints)]
+                        robot_node.set_trajectory(waypoints)
 
                 elif input_id == "tick":
                     robot_node.update_joint_state()
-                    robot_node.hold_position()
 
                     if robot_node.current_joints is not None:
                         node.send_output(
@@ -133,12 +158,20 @@ def main():
                             pa.array(robot_node.current_joints, type=pa.float32()),
                             {"timestamp": time.time(), "encoding": "jointstate"}
                         )
-
                         node.send_output(
                             "joint_velocities",
                             pa.array(np.zeros(7), type=pa.float32()),
                             {"timestamp": time.time()}
                         )
+
+                    # Publish execution status so trajectory_executor and capture stay in sync
+                    status = robot_node.get_status()
+                    status_bytes = json.dumps(status).encode("utf-8")
+                    node.send_output(
+                        "execution_status",
+                        pa.array(list(status_bytes), type=pa.uint8()),
+                        {"timestamp": time.time()}
+                    )
 
             elif event["type"] == "STOP":
                 print("Stopping robot node...")

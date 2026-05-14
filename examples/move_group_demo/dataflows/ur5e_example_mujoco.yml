@@ -12,7 +12,7 @@ nodes:
   # MuJoCo Simulation (UR5e arm)
   # ===========================================
   - id: mujoco_sim
-    path: ../../../dora-mujoco/dora_mujoco/main_viewer.sh
+    path: ../../../dora-mujoco/dora_mujoco/main.py
     inputs:
       tick: dora/timer/millis/10
       control_input: trajectory_executor/joint_commands

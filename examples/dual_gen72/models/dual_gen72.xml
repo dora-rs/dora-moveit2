@@ -40,7 +40,7 @@
     </body>
 
     <!-- ========== LEFT ARM (at x=-0.3, on table at z=0.8) ========== -->
-    <body name="left_base" pos="-0.3 0 0.8">
+    <body name="left_base" pos="-0.4 0 0.8">
       <geom type="mesh" rgba="0.8 0.8 1.0 1" mesh="base_link"/>
       <body name="left_Link1" pos="0 0 0.218">
         <inertial pos="0 0 -0.047" mass="0.511" diaginertia="0.001 0.001 0.0004"/>
@@ -80,7 +80,7 @@
     </body>
 
     <!-- ========== RIGHT ARM (at x=0.3, rotated 180° about Z, on table at z=0.8) ========== -->
-    <body name="right_base" pos="0.3 0 0.8" quat="0 0 0 1">
+    <body name="right_base" pos="0.4 0 0.8" quat="0 0 0 1">
       <geom type="mesh" rgba="1.0 0.8 0.8 1" mesh="base_link"/>
       <body name="right_Link1" pos="0 0 0.218">
         <inertial pos="0 0 -0.047" mass="0.511" diaginertia="0.001 0.001 0.0004"/>

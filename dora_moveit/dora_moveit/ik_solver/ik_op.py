@@ -365,7 +365,7 @@ def main():
                     value = event["value"]
                     # Check if this is a JSON dual-arm request
                     if hasattr(value, 'to_pylist'):
-                        raw = bytes(value.to_pylist())
+                        raw = bytes(int(x) for x in value.to_pylist())
                     elif hasattr(value, 'to_numpy'):
                         raw = value.to_numpy()
                     else:

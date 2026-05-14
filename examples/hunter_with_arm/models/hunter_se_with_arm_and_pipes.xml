@@ -154,6 +154,9 @@
                               size="0.005 0.002"
                               rgba="0.1 0.1 0.3 1"
                               pos="0.015 0.024 0" euler="1.5708 0 0"/>
+                        <!-- Virtual RGB camera, lenses face +Y in d435_mount frame -->
+                        <camera name="wrist_cam" pos="0 0.022 0" euler="1.5708 0 0"
+                                fovy="69" resolution="640 480"/>
                       </body>
                     </body>
                   </body>

@@ -553,8 +553,8 @@ class PlannerOperator:
         )
         
         print(f"\n[Plan #{self.plan_count}] {planner_type.value}")
-        print(f"  Start: {start_config[:3]}...")
-        print(f"  Goal:  {goal_config[:3]}...")
+        print(f"  Start: {[float(f'{v:.2f}') for v in start_config]}")
+        print(f"  Goal:  {[float(f'{v:.2f}') for v in goal_config]}")
         
         result = self.planner.plan(request)
 

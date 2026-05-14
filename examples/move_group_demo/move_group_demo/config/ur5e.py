@@ -25,6 +25,9 @@ class UR5eConfig:
     # Number of joints
     NUM_JOINTS = 6
 
+    # Arm joints start at qpos index 7 (after freejoint[7])
+    ARM_QPOS_START = 7
+
     # Joint limits (from URDF / Menagerie)
     JOINT_CONFIGS = [
         JointConfig("shoulder_pan_joint",  -6.2832, 6.2832, 3.1416, 150.0),

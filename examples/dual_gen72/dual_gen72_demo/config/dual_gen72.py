@@ -20,8 +20,8 @@ class DualGEN72Config:
 
     # ===== Arm base transforms (relative to world) =====
     ARM_BASE_TRANSFORMS = {
-        "left_arm": {"xyz": [-0.3, 0.0, 0.8], "rpy": [0, 0, 0]},
-        "right_arm": {"xyz": [0.3, 0.0, 0.8], "rpy": [0, 0, 3.14159265]},
+        "left_arm": {"xyz": [-0.4, 0.0, 0.8], "rpy": [0, 0, 0]},
+        "right_arm": {"xyz": [0.4, 0.0, 0.8], "rpy": [0, 0, 3.14159265]},
     }
 
     # ===== MuJoCo qpos indices per arm =====
@@ -83,32 +83,33 @@ class DualGEN72Config:
     }
 
     # ===== Home / Safe configurations =====
-    _GEN72_HOME = np.array([0.0, -0.5, 0.0, 0.0, 0.0, 0.5, 0.0])
+    _LEFT_HOME = np.array([-1.3418, 1.2089, -0.0155, -0.4788, -0.2429, 0.1985, 0.002])
+    _RIGHT_HOME = np.array([1.3418, 1.2089, -0.0155, -0.4788, 0.2429, 0.1985, -0.002])
 
-    HOME_CONFIG = _GEN72_HOME
-    SAFE_CONFIG = _GEN72_HOME
+    HOME_CONFIG = _LEFT_HOME
+    SAFE_CONFIG = _LEFT_HOME
 
     HOME_CONFIG_PER_CHAIN = {
-        "left_arm": _GEN72_HOME,
-        "right_arm": _GEN72_HOME,
+        "left_arm": _LEFT_HOME,
+        "right_arm": _RIGHT_HOME,
     }
 
     # ===== Named poses =====
     NAMED_POSES = {
-        "home": _GEN72_HOME,
-        "safe": _GEN72_HOME,
+        "home": _LEFT_HOME,
+        "safe": _LEFT_HOME,
         "zero": np.zeros(7),
     }
 
     NAMED_POSES_PER_CHAIN = {
         "left_arm": {
-            "home": _GEN72_HOME,
-            "safe": _GEN72_HOME,
+            "home": _LEFT_HOME,
+            "safe": _LEFT_HOME,
             "zero": np.zeros(7),
         },
         "right_arm": {
-            "home": _GEN72_HOME,
-            "safe": _GEN72_HOME,
+            "home": _RIGHT_HOME,
+            "safe": _RIGHT_HOME,
             "zero": np.zeros(7),
         },
     }

@@ -70,19 +70,20 @@ class TrajectoryExecutor:
     def step(self) -> Optional[np.ndarray]:
         """
         Execute one step.
-        ALWAYS output HOME position when idle to keep arm stable.
+        When idle, hold the last commanded target to resist gravity drift.
         """
 
         # =========================
         # IDLE / HOLD MODE
         # =========================
         if not self.is_executing or len(self.trajectory) == 0:
-            # Return HOME position to keep arm stable
-            if self._is_dual and self._dual_home is not None:
-                return self._dual_home.copy()
+            if self.last_command is not None:
+                return self.last_command.copy()
             return self._home_config.copy()
 
         if self.prev_waypoint is None:
+            if self.last_command is not None:
+                return self.last_command.copy()
             return self._home_config.copy()
 
         # =========================
@@ -101,14 +102,11 @@ class TrajectoryExecutor:
                 self.is_executing = False
                 print(f"[Executor] Trajectory #{self.execution_count} complete!")
 
-                # CRITICAL FIX:
-                # Do NOT output last waypoint
-                # Hold current real joint state
-                if self.current_joints is not None:
-                    self.last_command = self.current_joints.copy()
-                    return self.current_joints.copy()
-
-                return self.last_command
+                # Hold the trajectory's final waypoint as the target.
+                # Using the planned target (not current_joints) prevents
+                # gravity-induced drift accumulation.
+                self.last_command = target.copy()
+                return self.last_command.copy()
 
             target = self.trajectory[self.current_waypoint_idx]
 

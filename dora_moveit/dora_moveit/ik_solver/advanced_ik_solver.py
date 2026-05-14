@@ -192,47 +192,53 @@ class TracIKSolver:
         current_pos, _ = self.fk.compute_fk(q)
         return np.linalg.norm(target_pos - current_pos)
 
+    @staticmethod
+    def _rpy_to_rot(rpy: np.ndarray) -> np.ndarray:
+        r, p, y = rpy
+        cr, sr = np.cos(r), np.sin(r)
+        cp, sp = np.cos(p), np.sin(p)
+        cy, sy = np.cos(y), np.sin(y)
+        Rz = np.array([[cy, -sy, 0], [sy, cy, 0], [0, 0, 1]])
+        Ry = np.array([[cp, 0, sp], [0, 1, 0], [-sp, 0, cp]])
+        Rx = np.array([[1, 0, 0], [0, cr, -sr], [0, sr, cr]])
+        return Rz @ Ry @ Rx
+
+    def _resolve_target_rot(self, request: IKRequest) -> Optional[np.ndarray]:
+        """Convert request orientation to 3x3 rotation matrix, or None."""
+        ori = request.target_orientation
+        if ori is None:
+            return None
+        ori = np.asarray(ori, dtype=float)
+        if request.orientation_type == "rpy" and ori.shape == (3,):
+            return self._rpy_to_rot(ori)
+        if request.orientation_type == "matrix" and ori.shape == (3, 3):
+            return ori
+        # quaternion [qw, qx, qy, qz]
+        if ori.shape == (4,):
+            qw, qx, qy, qz = ori
+            return np.array([
+                [1 - 2*(qy**2 + qz**2), 2*(qx*qy - qw*qz), 2*(qx*qz + qw*qy)],
+                [2*(qx*qy + qw*qz), 1 - 2*(qx**2 + qz**2), 2*(qy*qz - qw*qx)],
+                [2*(qx*qz - qw*qy), 2*(qy*qz + qw*qx), 1 - 2*(qx**2 + qy**2)],
+            ])
+        return None
+
     def _objective_function(
         self,
         q: np.ndarray,
         target_pos: np.ndarray,
         target_rot: Optional[np.ndarray] = None
     ) -> float:
-        """
-        Objective function for optimization.
-
-        Args:
-            q: Joint positions
-            target_pos: Target position
-            target_rot: Target rotation matrix (optional)
-
-        Returns:
-            Error value
-        """
         current_pos, current_rot = self.fk.compute_fk(q)
-
-        # Position error
         pos_error = np.linalg.norm(target_pos - current_pos)
-
-        # Orientation error (if provided)
         if target_rot is not None:
-            # Frobenius norm of rotation difference
             rot_error = np.linalg.norm(target_rot - current_rot, 'fro')
             return pos_error + 0.1 * rot_error
-        else:
-            return pos_error
+        return pos_error
 
     def solve_jacobian(self, request: IKRequest) -> IKResult:
-        """
-        Solve IK using damped least squares Jacobian method.
-
-        Args:
-            request: IK request
-
-        Returns:
-            IK result
-        """
         target_pos = request.target_position
+        target_rot = self._resolve_target_rot(request)
 
         if request.seed_joints is not None:
             q = request.seed_joints.copy()
@@ -245,11 +251,23 @@ class TracIKSolver:
         for iteration in range(self.max_iterations):
             q = np.asarray(q).flatten()[:len(self.joint_limits_lower)]
 
-            current_pos, _ = self.fk.compute_fk(q)
+            current_pos, current_rot = self.fk.compute_fk(q)
             pos_error = target_pos - current_pos
             error_norm = np.linalg.norm(pos_error)
 
-            if error_norm < self.position_tolerance:
+            if target_rot is not None:
+                # Orientation error as axis-angle vector: skew-symmetric part of R_err = R_target @ R_cur^T
+                R_err = target_rot @ current_rot.T
+                ori_error = np.array([R_err[2, 1] - R_err[1, 2],
+                                      R_err[0, 2] - R_err[2, 0],
+                                      R_err[1, 0] - R_err[0, 1]]) * 0.5
+                ori_norm = np.linalg.norm(ori_error)
+            else:
+                ori_error = np.zeros(3)
+                ori_norm = 0.0
+
+            converged = error_norm < self.position_tolerance and ori_norm < self.orientation_tolerance
+            if converged:
                 return IKResult(
                     success=True,
                     joint_positions=q,
@@ -258,17 +276,13 @@ class TracIKSolver:
                     message="Jacobian IK converged"
                 )
 
-            # Compute Jacobian (position only)
-            J = self.fk.compute_jacobian(q)[:3, :]
-
-            # Damped least squares
+            J = self.fk.compute_jacobian(q)  # 6 x n
+            task_error = np.concatenate([pos_error, ori_error])  # 6D
             JJT = J @ J.T
-            J_pinv = J.T @ np.linalg.inv(JJT + damping * np.eye(3))
+            J_pinv = J.T @ np.linalg.inv(JJT + damping * np.eye(6))
 
-            dq = J_pinv @ pos_error
+            dq = J_pinv @ task_error
             q = q + step_size * dq
-
-            # Apply joint limits
             q = np.clip(q, self.joint_limits_lower, self.joint_limits_upper)
 
         current_pos, _ = self.fk.compute_fk(q)
@@ -305,9 +319,11 @@ class TracIKSolver:
             self.joint_limits_upper
         )]
 
+        target_rot = self._resolve_target_rot(request)
+
         # Optimize
         result = minimize(
-            fun=lambda q: self._objective_function(q, target_pos),
+            fun=lambda q: self._objective_function(q, target_pos, target_rot),
             x0=q0,
             method='L-BFGS-B',
             bounds=bounds,

@@ -20,7 +20,7 @@ nodes:
       - joint_velocities
       - sensor_data
     env:
-      MODEL_NAME: "/home/demo/Downloads/dora-moveit/examples/hunter_with_arm/models/GEN72_base.xml"
+      MODEL_NAME: "/home/demo/dora-moveit2/examples/hunter_with_arm/models/GEN72_base.xml"
       MUJOCO_GL: "glfw"
 
   # ===========================================

@@ -168,6 +168,26 @@ class IMUSensor:
                            float(body_angvel[0]), float(body_angvel[1]), float(body_angvel[2]))
 
 
+class CameraRenderer:
+    """Offscreen RGB renderer for a named MuJoCo camera."""
+
+    def __init__(self, model, data, camera_name: str, width: int = 640, height: int = 480):
+        self.model = model
+        self.data = data
+        self.width = width
+        self.height = height
+        self.camera_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_CAMERA, camera_name)
+        if self.camera_id < 0:
+            raise ValueError(f"Camera '{camera_name}' not found in model")
+        self.renderer = mujoco.Renderer(model, height, width)
+        print(f"  [Camera] '{camera_name}' id={self.camera_id} {width}x{height}")
+
+    def render(self) -> np.ndarray:
+        """Return H×W×3 uint8 RGB array."""
+        self.renderer.update_scene(self.data, camera=self.camera_id)
+        return self.renderer.render()
+
+
 class MuJoCoSimulator:
     """MuJoCo simulator for Dora."""
 
@@ -322,12 +342,17 @@ class MuJoCoSimulator:
 
         # Virtual spring on freejoint yaw to keep car facing straight
         # Disabled in NAV_MODE (dora-nav lateral controller handles path following)
+        # Only apply to chassis-like bodies (not free-floating objects like graspable balls)
         if not self.nav_mode and self.model.njnt > 0 and self.model.jnt_type[0] == 0:
-            # Yaw spring: extract yaw from quaternion (qpos[3:7])
-            qw, qx, qy, qz = self.data.qpos[3], self.data.qpos[4], self.data.qpos[5], self.data.qpos[6]
-            yaw = 2.0 * np.arctan2(qw * qz + qx * qy, 1.0 - 2.0 * (qy * qy + qz * qz))
-            self.data.qfrc_applied[5] = -2000.0 * yaw   # rz: strong spring to hold heading
-            self.data.qfrc_applied[1] = -200.0 * self.data.qpos[1]  # ty: gentle spring to center Y
+            body_id = self.model.jnt_bodyid[0]
+            body_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_BODY, body_id) or ""
+            is_chassis = any(k in body_name.lower() for k in ("hunter", "chassis", "base", "car", "robot"))
+            if is_chassis:
+                # Yaw spring: extract yaw from quaternion (qpos[3:7])
+                qw, qx, qy, qz = self.data.qpos[3], self.data.qpos[4], self.data.qpos[5], self.data.qpos[6]
+                yaw = 2.0 * np.arctan2(qw * qz + qx * qy, 1.0 - 2.0 * (qy * qy + qz * qz))
+                self.data.qfrc_applied[5] = -2000.0 * yaw   # rz: strong spring to hold heading
+                self.data.qfrc_applied[1] = -200.0 * self.data.qpos[1]  # ty: gentle spring to center Y
 
         mujoco.mj_step(self.model, self.data)
         self._update_state_data()
@@ -390,6 +415,20 @@ def main():
         lidar_sensor = LidarSensor(simulator.model, simulator.data)
         imu_sensor = IMUSensor(simulator.model, simulator.data)
 
+    # Initialize camera renderer (optional)
+    camera_name = os.getenv("CAMERA_NAME", "")
+    camera_renderer: Optional[CameraRenderer] = None
+    camera_rate = float(os.getenv("CAMERA_RATE", "10"))
+    camera_period = 1.0 / camera_rate if camera_rate > 0 else 999
+    last_camera_time = 0.0
+    if camera_name:
+        try:
+            cam_w = int(os.getenv("CAMERA_WIDTH", "640"))
+            cam_h = int(os.getenv("CAMERA_HEIGHT", "480"))
+            camera_renderer = CameraRenderer(simulator.model, simulator.data, camera_name, cam_w, cam_h)
+        except ValueError as e:
+            print(f"  [Camera] WARNING: {e}")
+
     # Sensor output rates
     pointcloud_rate = float(os.getenv("POINTCLOUD_RATE", "10"))
     imu_rate = float(os.getenv("IMU_RATE", "20"))
@@ -446,9 +485,17 @@ def main():
             state = simulator.get_state()
             sim_time = state.get("time", 0.0)
 
+            # Wrap hinge joint angles to [-pi, pi] for joints without enforced limits.
+            # Joints with jnt_limited=1 are already bounded by MuJoCo's constraint solver.
+            qpos = state["qpos"].copy()
+            for j in range(simulator.model.njnt):
+                if simulator.model.jnt_type[j] == 3 and not simulator.model.jnt_limited[j]:
+                    qi = simulator.model.jnt_qposadr[j]
+                    qpos[qi] = (qpos[qi] + np.pi) % (2 * np.pi) - np.pi
+
             node.send_output(
                 "joint_positions",
-                pa.array(state["qpos"]),
+                pa.array(qpos),
                 {"timestamp": sim_time, "encoding": "jointstate"}
             )
 
@@ -497,6 +544,17 @@ def main():
                         {"timestamp": sim_time}
                     )
                     last_imu_time = sim_time
+
+            # Camera output (independent of NAV_MODE)
+            if camera_renderer and (sim_time - last_camera_time) >= camera_period:
+                rgb = camera_renderer.render()  # H×W×3 uint8
+                h, w, _ = rgb.shape
+                node.send_output(
+                    "camera_image",
+                    pa.array(rgb.flatten().tolist(), type=pa.uint8()),
+                    {"timestamp": sim_time, "width": w, "height": h, "encoding": "rgb8"}
+                )
+                last_camera_time = sim_time
 
 
 if __name__ == "__main__":
