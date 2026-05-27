@@ -1,16 +1,15 @@
-# Dual GEN72 Demo — Dual-arm coordination on dora-rs
-# ====================================================
-# Two GEN72 7-DOF arms on a shared table.
-# 14D unified pipeline: left 7 joints + right 7 joints.
+# GEN72 + Robotiq 2F-85 Gripper Demo
+# ====================================
+# Demonstrates arm motion planning + gripper open/close.
 #
 # Usage:
-#   cd examples/dual_gen72
+#   cd examples/move_group_demo
 #   dora up
-#   dora start dataflows/dual_gen72_mujoco.yml
+#   dora start dataflows/gen72_gripper_mujoco.yml
 
 nodes:
   # ===========================================
-  # MuJoCo Simulation (Dual GEN72)
+  # MuJoCo Simulation (GEN72 + Robotiq 2F-85)
   # ===========================================
   - id: mujoco_sim
     path: ../../../dora-mujoco/dora_mujoco/main.py
@@ -23,14 +22,14 @@ nodes:
       - joint_velocities
       - sensor_data
     env:
-      MODEL_NAME: "../models/dual_gen72.xml"
+      MODEL_NAME: "../models/GEN72_with_gripper.xml"
       MUJOCO_GL: "glfw"
 
   # ===========================================
-  # Planning Scene (library operator)
+  # Planning Scene
   # ===========================================
   - id: planning_scene
-    path: ../dual_gen72_demo/nodes/planning_scene.py
+    path: ../move_group_demo/nodes/planning_scene.py
     inputs:
       robot_state: mujoco_sim/joint_positions
       scene_command: user_node/scene_command
@@ -39,13 +38,13 @@ nodes:
       - scene_update
       - command_result
     env:
-      ROBOT_CONFIG_MODULE: "dual_gen72_demo.config.dual_gen72"
+      ROBOT_CONFIG_MODULE: "move_group_demo.config.gen72_with_gripper"
 
   # ===========================================
-  # OMPL Motion Planner (library operator)
+  # OMPL Motion Planner
   # ===========================================
   - id: planner
-    path: ../dual_gen72_demo/nodes/planner.py
+    path: ../move_group_demo/nodes/planner.py
     inputs:
       plan_request: user_node/plan_request
       scene_update: planning_scene/scene_update
@@ -53,26 +52,26 @@ nodes:
       - trajectory
       - plan_status
     env:
-      ROBOT_CONFIG_MODULE: "dual_gen72_demo.config.dual_gen72"
+      ROBOT_CONFIG_MODULE: "move_group_demo.config.gen72_with_gripper"
 
   # ===========================================
-  # IK Solver (library operator)
+  # IK Solver
   # ===========================================
   - id: ik_solver
-    path: ../dual_gen72_demo/nodes/ik_solver.py
+    path: ../move_group_demo/nodes/ik_solver.py
     inputs:
       ik_request: user_node/ik_request
     outputs:
       - ik_solution
       - ik_status
     env:
-      ROBOT_CONFIG_MODULE: "dual_gen72_demo.config.dual_gen72"
+      ROBOT_CONFIG_MODULE: "move_group_demo.config.gen72_with_gripper"
 
   # ===========================================
-  # Trajectory Executor (library operator)
+  # Trajectory Executor
   # ===========================================
   - id: trajectory_executor
-    path: ../dual_gen72_demo/nodes/trajectory_executor.py
+    path: ../move_group_demo/nodes/trajectory_executor.py
     inputs:
       trajectory: planner/trajectory
       cartesian_trajectory: user_node/cartesian_trajectory
@@ -82,15 +81,15 @@ nodes:
       - joint_commands
       - execution_status
     env:
-      ROBOT_CONFIG_MODULE: "dual_gen72_demo.config.dual_gen72"
+      ROBOT_CONFIG_MODULE: "move_group_demo.config.gen72_with_gripper"
 
   # ===========================================
-  # Dual-Arm Demo (user application)
+  # Gripper Demo (user application)
   # ===========================================
   - id: user_node
-    path: ../dual_gen72_demo/nodes/dual_arm_final_demo.py
+    path: ../move_group_demo/nodes/gen72_gripper_demo.py
     env:
-      ROBOT_CONFIG_MODULE: "dual_gen72_demo.config.dual_gen72"
+      ROBOT_CONFIG_MODULE: "move_group_demo.config.gen72_with_gripper"
     inputs:
       joint_positions: mujoco_sim/joint_positions
       plan_status: planner/plan_status

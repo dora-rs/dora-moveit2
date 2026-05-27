@@ -356,6 +356,35 @@ class DualMoveGroup:
                 raise KeyError(f"Unknown right pose '{right_name}'. Available: {list(right_poses.keys())}")
             self._right_target = right_poses[right_name].copy()
 
+    # ==================== Gripper control ==================== #
+
+    def gripper_open(self, arm="both"):
+        """Open gripper(s). arm: 'left', 'right', or 'both'."""
+        self._send_gripper_command(0.0, arm)
+
+    def gripper_close(self, arm="both"):
+        """Close gripper(s). arm: 'left', 'right', or 'both'."""
+        self._send_gripper_command(0.8, arm)
+
+    def gripper_set(self, value, arm="both"):
+        """Set gripper position (0.0=open, 0.8=closed). arm: 'left', 'right', or 'both'."""
+        self._send_gripper_command(float(value), arm)
+
+    def _send_gripper_command(self, value, arm):
+        """Send gripper control command via dora output."""
+        gripper_indices = getattr(self._config, "GRIPPER_ACTUATOR_INDEX", {})
+        left_idx = gripper_indices.get("left_arm", 7)
+        right_idx = gripper_indices.get("right_arm", 15)
+
+        if arm == "left":
+            cmd = np.array([value, 0.0], dtype=np.float32)
+        elif arm == "right":
+            cmd = np.array([0.0, value], dtype=np.float32)
+        else:
+            cmd = np.array([value, value], dtype=np.float32)
+
+        self._node.send_output("gripper_control", pa.array(cmd, type=pa.float32()))
+
     def get_planning_scene_interface(self):
         """Get PlanningSceneInterface for adding/removing obstacles."""
         from dora_moveit.workflow.move_group import PlanningSceneInterface

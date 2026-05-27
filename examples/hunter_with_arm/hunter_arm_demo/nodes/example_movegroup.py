@@ -1,72 +1,77 @@
 #!/usr/bin/env python3
 """
-Example: Multi-view capture using MoveGroup API
-=================================================
-Compare this ~40-line script to the 287-line multi_view_capture_node.py.
-
-This is the dora-moveit equivalent of the ROS MoveIt example:
-  group = MoveGroupCommander("manipulator")
-  group.set_named_target("home")
-  group.go(wait=True)
+Example: MoveGroup + BaseController API demo
+==============================================
+Demonstrates using both the arm (MoveGroup) and chassis (BaseController)
+high-level APIs together.
 
 Usage:
-  dora start config/dataflow_movegroup_mujoco.yml
+  dora start dataflows/hunter_arm_mujoco.yml
 """
+import time
 from dora_moveit.workflow.move_group import MoveGroup
+from dora_moveit.workflow.base_controller import BaseController
 
 
 def main():
-    # ---- 1. Connect to robot ----
+    # ---- 1. Connect to robot (share one dora Node) ----
     group = MoveGroup("gen72")
-    scene = group.get_planning_scene_interface()
+    base = BaseController(node=group._node)
+    group._joint_callbacks.append(base.update_from_joints)
 
-    # ---- 2. Go to home position ----
-    print("Task: 回到初始位置")
-    group.set_named_target("home")
-    group.go(wait=True)
-    print("Done: 回到初始位置")
-
-    # ---- 3. Joint-space goal (turn right 90 degrees) ----
-    print("Task: 底座右转 90°")
+    # Arm poses
     TURN_RIGHT = [-1.57, -0.5, 0.0, 0.0, 0.0, 0.5, 0.0]
-    group.go(TURN_RIGHT, wait=True)
-    print("Done: 底座右转 90°")
-
-    # ---- 4. Arch over pipe ----
-    print("Task: 拱形运动越过管道至拍摄点")
     ARCH_RIGHT = [-1.57, 0.26, 0.0, -1.65, 0.0, 0.68, 0.0]
-    group.go(ARCH_RIGHT, wait=True)
-    print("Done: 拱形运动越过管道至拍摄点")
 
-    # ---- 5. Retract and return home ----
-    print("Task: 缩回并回到初始位置")
+    # ---- 2. 初始位置 → 采集点1 ----
+    print("Task: 底盘移动到采集点1")
+    base.set_velocity(linear=1.5, angular=0.0)
+    time.sleep(2.0) # 运动时间
+    base.stop()
+    x, y, yaw = base.get_position()
+    print(f"Done: 到达采集点1, x={x:.3f} y={y:.3f}")
+
+    # ---- 3. 采集点1：机械臂采集动作 ----
+    print("Task: 采集点1 - 机械臂执行采集")
+    group.set_named_target("home")
+    group.go(wait=True)
+    group.go(TURN_RIGHT, wait=True)
+    group.go(ARCH_RIGHT, wait=True)
     group.go(TURN_RIGHT, wait=True)
     group.set_named_target("home")
     group.go(wait=True)
-    print("Done: 缩回并回到初始位置")
+    print("Done: 采集点1 采集完成")
 
-    # ---- 6. Plan without executing ----
-    print("Task: 演示Plan without executing，规划自定义关节目标轨迹")
-    success, trajectory = group.plan([-1.0, -0.3, 0.0, -0.5, 0.0, 0.5, 0.0])
-    if success:
-        print(f"Done: 规划完成，共 {len(trajectory)} 个路径点，开始执行")
-        group.execute(trajectory, wait=True)
-        print("Done: 自定义关节目标轨迹执行完毕")
+    # ---- 4. 采集点1 → 采集点2 ----
+    print("Task: 底盘移动到采集点2")
+    base.set_velocity(linear=1.5, angular=0.0)
+    time.sleep(2.0)
+    base.stop()
+    x, y, yaw = base.get_position()
+    print(f"Done: 到达采集点2, x={x:.3f} y={y:.3f}")
 
-    # ---- 7. Return home and shutdown ----
-    print("Task: 返回初始位置并结束")
+    # ---- 5. 采集点2：机械臂采集动作 ----
+    print("Task: 采集点2 - 机械臂执行采集")
     group.set_named_target("home")
     group.go(wait=True)
-    print("Done: 全部任务执行完毕，进入空闲")
+    group.go(TURN_RIGHT, wait=True)
+    group.go(ARCH_RIGHT, wait=True)
+    group.go(TURN_RIGHT, wait=True)
+    group.set_named_target("home")
+    group.go(wait=True)
+    print("Done: 采集点2 采集完成")
 
-    # Keep alive (dora event loop continues in background)
-    import time
-    try:
-        while True:
-            time.sleep(1.0)
-    except KeyboardInterrupt:
-        pass
+    # ---- 6. 采集点2 → 返回初始位置 ----
+    print("Task: 底盘返回初始位置")
+    base.set_velocity(linear=-1.5, angular=0.0)
+    time.sleep(4.0)
+    base.stop()
+    x, y, yaw = base.get_position()
+    print(f"Done: 返回初始位置, x={x:.3f} y={y:.3f}")
 
+    # ---- 7. Shutdown ----
+    print("Done: 全部任务执行完毕")
+    base.shutdown()
     group.shutdown()
 
 

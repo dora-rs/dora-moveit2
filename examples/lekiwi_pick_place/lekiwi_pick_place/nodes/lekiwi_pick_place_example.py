@@ -41,18 +41,18 @@ def main():
     #   pick_above z~0.34, pick_grasp z~0.18
     #   place_above z~0.34, place_lower z~0.18
 
-    GRIPPER_OPEN = 0.0
-    GRIPPER_CLOSED = 0.55
+    GRIPPER_OPEN = 0.60
+    GRIPPER_CLOSED = 0.40
 
     # Pick: move above ball, lower down, grasp, lift
-    pick_above = [0.053, 0.825, -1.1, -1.65, 1.346, GRIPPER_OPEN]      # z~0.34, above ball
-    pick_grasp = [0.053, 0.417, 0.688, -1.65, 2.243, GRIPPER_OPEN]     # z~0.18, at ball
-    pick_lift  = [0.053, 0.825, -1.1, -1.65, 1.346, GRIPPER_CLOSED]    # z~0.34, lift up
+    pick_above = [0.07, -0.646, -0.106, 1.53, 1.57, GRIPPER_OPEN]      # z~0.34, above ball
+    pick_grasp = [0.07, -0.78, 0.711, 0.42, 1.57, GRIPPER_OPEN]     # z~0.18, at ball
+    pick_lift  = [0.07, -0.646, -0.106, 1.53, 1.57, GRIPPER_CLOSED]     # z~0.34, lift up
 
     # Place: move above plate, lower down, release, retreat
-    place_above = [0.684, 1.058, -1.65, -0.434, 2.243, GRIPPER_CLOSED]  # z~0.34, above plate
-    place_lower = [0.684, 1.0, -0.275, -1.65, 2.243, GRIPPER_CLOSED]    # z~0.18, at plate
-    place_retreat = [0.684, 1.058, -1.65, -0.434, 2.243, GRIPPER_OPEN]  # z~0.34, retreat up
+    place_above = [0.595, -0.821, 0.116, 0.88, 1.57, GRIPPER_CLOSED]  # z~0.34, above plate
+    place_lower = [0.670, -0.332, 0.181, 0.42, 1.57, GRIPPER_CLOSED]    # z~0.18, at plate
+    place_retreat = [0.595, -0.821, 0.116, 0.88, 1.57, GRIPPER_OPEN]  # z~0.34, retreat up
 
     # =========================================================
     # 1. Home position

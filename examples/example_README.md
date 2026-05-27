@@ -609,7 +609,7 @@ dora stop
 ```bash
 cd /home/demo/dora-moveit2/examples/move_group_demo
 dora up
-dora start dataflows/single_arm_grasping_mujoco.yml
+dora start dataflows/gen72_gripper_mujoco.yml
 dora stop
 ```
 

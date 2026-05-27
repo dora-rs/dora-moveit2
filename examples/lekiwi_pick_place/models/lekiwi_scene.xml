@@ -134,7 +134,7 @@
     <!-- Pick-and-place target: red ball -->
     <body name="target_object" pos="0.30 0.0 0.174">
       <joint type="free"/>
-      <geom name="red_ball" type="sphere" size="0.024" rgba="1 0 0 1" mass="0.005"/>
+      <geom name="red_ball" type="sphere" size="0.02" rgba="1 0 0 1" mass="0.005"/>
     </body>
 
     <!-- Place pedestal -->
@@ -331,5 +331,11 @@
     <pair name="omniwheel_right" geom1="floor" geom2="wheel_right_collision" condim="3" friction="0.05 1."/>
     <exclude body1="Base" body2="Rotation_Pitch"/>
   </contact>
+
+  <keyframe>
+    <key name="home"
+         qpos="0.30 0 0.174 1 0 0 0  0 0 0 1 0 0 0  0 0 0  0 -1.65 1.23 1.13 0 0"
+         ctrl="0 0 0  0 -1.65 1.23 1.13 0 0"/>
+  </keyframe>
 
 </mujoco>

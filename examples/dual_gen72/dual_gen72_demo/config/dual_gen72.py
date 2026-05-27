@@ -25,17 +25,31 @@ class DualGEN72Config:
     }
 
     # ===== MuJoCo qpos indices per arm =====
+    # Layout: left_arm(0-6), left_gripper(7-14), right_arm(15-21), right_gripper(22-29), ball(30)
     ARM_QPOS_START_PER_CHAIN = {
         "left_arm": 0,
-        "right_arm": 7,
+        "right_arm": 15,
     }
 
     # Default ARM_QPOS_START for backward compat (left arm)
     ARM_QPOS_START = 0
 
     # Total actuators in MuJoCo model
-    NUM_ACTUATORS = 14
+    # Layout: [left_arm(0-6), left_gripper(7), right_arm(8-14), right_gripper(15)]
+    NUM_ACTUATORS = 16
     ARM_ACTUATOR_START = 0
+
+    # Gripper actuator indices
+    GRIPPER_ACTUATOR_INDEX = {
+        "left_arm": 7,
+        "right_arm": 15,
+    }
+
+    # Per-arm actuator start indices (arm joints only, excluding gripper)
+    ARM_ACTUATOR_START_PER_CHAIN = {
+        "left_arm": 0,
+        "right_arm": 8,
+    }
 
     # ===== Joint limits (same for both arms, from GEN72 URDF) =====
     JOINT_LOWER_LIMITS = np.array([-3.0014, -1.8323, -3.0014, -2.8792, -3.0014, -1.707, -3.0014])
@@ -83,8 +97,8 @@ class DualGEN72Config:
     }
 
     # ===== Home / Safe configurations =====
-    _LEFT_HOME = np.array([-1.3418, 1.2089, -0.0155, -0.4788, -0.2429, 0.1985, 0.002])
-    _RIGHT_HOME = np.array([1.3418, 1.2089, -0.0155, -0.4788, 0.2429, 0.1985, -0.002])
+    _LEFT_HOME = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    _RIGHT_HOME = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
     HOME_CONFIG = _LEFT_HOME
     SAFE_CONFIG = _LEFT_HOME

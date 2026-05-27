@@ -41,21 +41,27 @@ def main():
     print("[目标] 左臂移动到球体正上方（接近位姿）")
     # Ball is at (0, 0.1, 0.83) in world frame
     # Left arm approach from above
-    left_above_ball = [0.0, 0.3, 0.0, -1.0, 0.0, 0.5, 0.0]
+    left_above_ball = [0.2, 0.3, 0.0, -1.0, 0.0, 0.5, 0.0]
     group.go_left(left_above_ball, wait=True)
     print("[完成] 左臂已到达球体上方")
     time.sleep(0.05)
 
     # Lower to grasp
     print("[目标] 左臂下降至抓取位置")
-    left_grasp = [0.0, 0.5, 0.0, -1.2, 0.0, 0.5, 0.0]
+    left_grasp = [0.2, 0.5, 0.0, -1.2, 0.0, 0.5, 0.0]
     group.go_left(left_grasp, wait=True)
-    print("[完成] 左臂抓取球体中...")
+    print("[完成] 左臂已到达抓取位置")
     time.sleep(0.05)
+
+    # Close left gripper to grasp ball
+    print("[目标] 左臂夹爪夹取球体")
+    group.gripper_close(arm="left")
+    print("[完成] 左臂夹爪已夹紧")
+    time.sleep(2.5)
 
     # Lift with ball
     print("[目标] 左臂提升，带球离开")
-    left_lift = [0.0, 0.3, 0.0, -1.0, 0.0, 0.5, 0.0]
+    left_lift = [0.2, 0.3, 0.0, -1.0, 0.0, 0.5, 0.0]
     group.go_left(left_lift, wait=True)
     print("[完成] 左臂已提起球体")
     time.sleep(0.05)
@@ -64,7 +70,7 @@ def main():
     print("\n--- 3. 右臂移动到接收位置 ---")
     print("[演示] 单臂独立运动：右臂移动到递交区域等待接收")
     print("[目标] 右臂到达接收位姿")
-    right_receive = [0.0, 0.3, 0.0, -1.0, 0.0, 0.5, 0.0]
+    right_receive = [0.0, 0.3, 0.0, -0.8, 0.0, 0.5, 2.0]
     group.go_right(right_receive, wait=True)
     print("[完成] 右臂已就位，准备接收")
     time.sleep(0.05)
@@ -84,14 +90,14 @@ def main():
     print("\n--- 5. 右臂放置球体到托盘 ---")
     print("[演示] 单臂独立运动：右臂将球体放置到目标托盘上")
     print("[目标] 右臂移动到托盘上方")
-    right_above_plate = [0.0, 0.3, 0.0, -1.0, 0.0, 0.5, 0.0]
+    right_above_plate = [-0.2, 0.3, 0.0, -1.0, 0.0, 0.5, 0.0]
     group.go_right(right_above_plate, wait=True)
     print("[完成] 右臂已到达托盘上方")
     time.sleep(0.05)
 
     # Lower to place
     print("[目标] 右臂下降，放置球体")
-    right_place = [0.0, 0.5, 0.0, -1.2, 0.0, 0.5, 0.0]
+    right_place = [0.2, 0.5, 0.0, -1.2, 0.0, 0.5, 0.0]
     group.go_right(right_place, wait=True)
     print("[完成] 球体已放置到托盘上")
     time.sleep(0.05)

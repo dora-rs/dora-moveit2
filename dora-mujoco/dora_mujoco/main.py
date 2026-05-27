@@ -208,6 +208,7 @@ class MuJoCoSimulator:
         self.last_cmd_time = time.time()
         self.cmd_timeout = 0.2
         self.target_q = None
+        self._gripper_ctrl = None
 
         # NAV_MODE disables virtual springs (dora-nav handles path following)
         self.nav_mode = os.getenv("NAV_MODE", "0") == "1"
@@ -340,6 +341,17 @@ class MuJoCoSimulator:
                 n = min(len(self.target_q), self.model.nu)
                 self.data.ctrl[:n] = self.target_q[:n]
 
+        # Restore gripper ctrl (independent of arm trajectory commands)
+        if self._gripper_ctrl is not None:
+            if hasattr(self._gripper_ctrl, '__len__'):
+                if len(self._gripper_ctrl) >= 2 and self.model.nu > 15:
+                    self.data.ctrl[7] = self._gripper_ctrl[0]
+                    self.data.ctrl[15] = self._gripper_ctrl[1]
+                elif len(self._gripper_ctrl) >= 1 and self.model.nu > 7:
+                    self.data.ctrl[7] = self._gripper_ctrl[0]
+            elif self.model.nu > 7:
+                self.data.ctrl[7] = self._gripper_ctrl
+
         # Virtual spring on freejoint yaw to keep car facing straight
         # Disabled in NAV_MODE (dora-nav lateral controller handles path following)
         # Only apply to chassis-like bodies (not free-floating objects like graspable balls)
@@ -460,6 +472,15 @@ def main():
             if event["id"] == "control_input":
                 control_array = event["value"].to_numpy()
                 simulator.apply_control(control_array)
+            elif event["id"] == "gripper_control":
+                gripper_cmd = event["value"].to_numpy()
+                if len(gripper_cmd) >= 2 and simulator.model.nu > 15:
+                    simulator.data.ctrl[7] = float(gripper_cmd[0])
+                    simulator.data.ctrl[15] = float(gripper_cmd[1])
+                    simulator._gripper_ctrl = gripper_cmd[:2].copy()
+                elif len(gripper_cmd) >= 1 and simulator.model.nu > 7:
+                    simulator.data.ctrl[7] = float(gripper_cmd[0])
+                    simulator._gripper_ctrl = gripper_cmd[:1].copy()
             elif event["id"] == "wheel_control":
                 wheel_cmd = event["value"].to_numpy()
                 if simulator.model.nu >= 11:

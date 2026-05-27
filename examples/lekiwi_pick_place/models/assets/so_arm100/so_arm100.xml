@@ -155,7 +155,7 @@
   </contact>
 
   <keyframe>
-    <key name="home" qpos="0 0 0 1.57 -1.57 0" ctrl="0 0 0 1.57 -1.57 0"/>
+    <key name="home" qpos="0 -1.65 1.23 1.13 0 0" ctrl="0 -1.65 1.23 1.13 0 0"/>
     <key name="rest" qpos="0 -1.75 1.59 1.13 0 0" ctrl="0 -1.75 1.59 1.13 0 0"/>
   </keyframe>
 </mujoco>

@@ -15,6 +15,7 @@ nodes:
     inputs:
       tick: dora/timer/millis/10
       control_input: trajectory_executor/joint_commands
+      wheel_control: user_node/wheel_commands
     outputs:
       - joint_positions
       - joint_velocities
@@ -81,19 +82,7 @@ nodes:
       ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
 
   # ===========================================
-  # Vehicle Controller (app-specific)
-  # ===========================================
-  - id: vehicle_controller
-    path: ../hunter_arm_demo/nodes/vehicle_controller.py
-    inputs:
-      joint_positions: mujoco_sim/joint_positions
-    outputs:
-      - wheel_commands
-      - movement_complete
-    env:
-
-  # ===========================================
-  # User Node (MoveGroup API example script)
+  # User Node (MoveGroup + BaseController API example)
   # ===========================================
   - id: user_node
     path: ../hunter_arm_demo/nodes/example_movegroup.py
@@ -105,11 +94,11 @@ nodes:
       ik_solution: ik_solver/ik_solution
       ik_status: ik_solver/ik_status
       command_result: planning_scene/command_result
-      vehicle_ready: vehicle_controller/movement_complete
     outputs:
       - robot_state
       - plan_request
       - ik_request
       - scene_command
+      - wheel_commands
     env:
       ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
