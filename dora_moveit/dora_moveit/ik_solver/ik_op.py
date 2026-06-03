@@ -344,8 +344,10 @@ def main():
 
     node = Node()
     config = load_config()
-    # Use TracIK solver by default (can be changed to "de" or "simple")
-    ik_op = IKOperator(num_joints=config.NUM_JOINTS, solver_type="tracik")
+    # Solver selectable via IK_SOLVER_TYPE env (default "tracik" for back-compat).
+    # "de" / "simple" use the pure-numpy NumericalIKSolver — no tracikpy needed.
+    solver_type = os.environ.get("IK_SOLVER_TYPE", "tracik")
+    ik_op = IKOperator(num_joints=config.NUM_JOINTS, solver_type=solver_type)
 
     print("IK operator started, waiting for requests...")
     
