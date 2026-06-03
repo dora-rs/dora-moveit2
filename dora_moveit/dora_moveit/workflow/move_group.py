@@ -68,7 +68,7 @@ class MoveGroup:
     inside each blocking method.
     """
 
-    def __init__(self, group_name: str = "gen72"):
+    def __init__(self, group_name: str = "gen72", node=None):
         self._group_name = group_name
         self._config = load_config()
         self._num_joints = self._config.NUM_JOINTS
@@ -92,8 +92,9 @@ class MoveGroup:
         self._expected_exec_count = 0
         self._plan_routed = False  # True when planner→executor has the trajectory
 
-        # Dora node (single-threaded access only)
-        self._node = Node()
+        # Dora node (single-threaded access only). Accept an injected node so an
+        # external owner (e.g. a SPEC vendor node) can share one Node per process.
+        self._node = node if node is not None else Node()
         self._stopped = False
 
         # Wait for first joint state
@@ -117,11 +118,20 @@ class MoveGroup:
 
         if event is None:
             return None
-        if event["type"] == "STOP":
+        self.handle_event(event)
+        return event
+
+    def handle_event(self, event):
+        """Dispatch one already-pulled dora event to the right handler.
+
+        Public so an external owner of the shared node (e.g. a SPEC vendor node)
+        can feed MoveGroup the non-cmd_request events it pulls from node.next().
+        """
+        if event.get("type") == "STOP":
             self._stopped = True
-            return event
-        if event["type"] != "INPUT":
-            return event
+            return
+        if event.get("type") != "INPUT":
+            return
 
         event_id = event["id"]
         try:
@@ -141,8 +151,6 @@ class MoveGroup:
                 self._handle_command_result(event)
         except Exception as e:
             print(f"[MoveGroup] Error handling {event_id}: {e}")
-
-        return event
 
     def _poll_until(self, condition_fn, timeout, poll_interval=0.05):
         """Poll events until condition_fn() returns True or timeout expires.
