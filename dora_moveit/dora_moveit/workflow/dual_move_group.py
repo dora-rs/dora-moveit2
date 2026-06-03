@@ -44,9 +44,10 @@ class DualMoveGroup:
     plan requests (7D left + 7D right) to the planner.
     """
 
-    def __init__(self, left_name: str = "left_arm", right_name: str = "right_arm"):
+    def __init__(self, left_name: str = "left_arm", right_name: str = "right_arm", speed_scale: float = 1.0):
         self._left_name = left_name
         self._right_name = right_name
+        self._speed_scale = speed_scale
         self._config = load_config()
         self._num_joints = self._config.NUM_JOINTS  # per arm
         self._total_joints = self._num_joints * 2
@@ -255,6 +256,90 @@ class DualMoveGroup:
         """Move only the right arm (left arm holds current position)."""
         return self.go(left_joints=self._left_joints, right_joints=joints, wait=wait, timeout=timeout)
 
+    def go_left_pose(self, pose, wait=True, timeout=30.0):
+        """Move left arm end-effector to a world-frame pose.
+
+        Args:
+            pose: [x, y, z] or [x, y, z, roll, pitch, yaw] in world frame.
+        """
+        world_pos, rpy = self._parse_pose(pose)
+        joints = self._solve_ik(world_pos, self._left_name, self._left_joints, rpy=rpy)
+        if joints is None:
+            return False
+        return self.go_left(joints, wait=wait, timeout=timeout)
+
+    def go_right_pose(self, pose, wait=True, timeout=30.0):
+        """Move right arm end-effector to a world-frame pose.
+
+        Args:
+            pose: [x, y, z] or [x, y, z, roll, pitch, yaw] in world frame.
+        """
+        world_pos, rpy = self._parse_pose(pose)
+        joints = self._solve_ik(world_pos, self._right_name, self._right_joints, rpy=rpy)
+        if joints is None:
+            return False
+        return self.go_right(joints, wait=wait, timeout=timeout)
+
+    @staticmethod
+    def _parse_pose(pose):
+        pose = np.asarray(pose, dtype=float)
+        if len(pose) == 6:
+            return pose[:3], pose[3:]
+        return pose[:3], None
+
+    @staticmethod
+    def _rpy_to_rot(rpy):
+        r, p, y = rpy
+        cr, sr = np.cos(r), np.sin(r)
+        cp, sp = np.cos(p), np.sin(p)
+        cy, sy = np.cos(y), np.sin(y)
+        Rz = np.array([[cy, -sy, 0], [sy, cy, 0], [0, 0, 1]])
+        Ry = np.array([[cp, 0, sp], [0, 1, 0], [-sp, 0, cp]])
+        Rx = np.array([[1, 0, 0], [0, cr, -sr], [0, sr, cr]])
+        return Rz @ Ry @ Rx
+
+    def _solve_ik(self, world_pos, arm_name, seed_joints, rpy=None):
+        from dora_moveit.ik_solver.advanced_ik_solver import TracIKSolver, IKRequest
+        base_tf = self._config.ARM_BASE_TRANSFORMS[arm_name]
+        base_xyz = np.array(base_tf["xyz"])
+        base_R = self._rpy_to_rot(base_tf["rpy"])  # world → arm-base rotation
+
+        # Transform target position into arm-local frame
+        local_pos = base_R.T @ (np.asarray(world_pos, dtype=float) - base_xyz)
+
+        # Transform target orientation into arm-local frame
+        local_rpy = None
+        if rpy is not None:
+            R_world = self._rpy_to_rot(np.asarray(rpy, dtype=float))
+            R_local = base_R.T @ R_world
+            # Convert back to RPY (ZYX)
+            sy = np.sqrt(R_local[0, 0]**2 + R_local[1, 0]**2)
+            if sy > 1e-6:
+                local_rpy = np.array([
+                    np.arctan2(R_local[2, 1], R_local[2, 2]),
+                    np.arctan2(-R_local[2, 0], sy),
+                    np.arctan2(R_local[1, 0], R_local[0, 0]),
+                ])
+            else:
+                local_rpy = np.array([
+                    np.arctan2(-R_local[1, 2], R_local[1, 1]),
+                    np.arctan2(-R_local[2, 0], sy),
+                    0.0,
+                ])
+
+        solver = TracIKSolver(self._config)
+        seed = np.asarray(seed_joints, dtype=float) if seed_joints is not None else None
+        result = solver.solve(IKRequest(
+            target_position=local_pos,
+            target_orientation=local_rpy,
+            seed_joints=seed,
+            orientation_type="rpy",
+        ))
+        if not result.success:
+            print(f"[DualMoveGroup] IK failed for {arm_name} at world pos {world_pos} (err={result.error:.4f})")
+            return None
+        return result.joint_positions
+
     def set_named_target(self, left_name=None, right_name=None):
         """Set targets to named poses."""
         per_chain = getattr(self._config, "NAMED_POSES_PER_CHAIN", {})
@@ -270,6 +355,35 @@ class DualMoveGroup:
             if right_name not in right_poses:
                 raise KeyError(f"Unknown right pose '{right_name}'. Available: {list(right_poses.keys())}")
             self._right_target = right_poses[right_name].copy()
+
+    # ==================== Gripper control ==================== #
+
+    def gripper_open(self, arm="both"):
+        """Open gripper(s). arm: 'left', 'right', or 'both'."""
+        self._send_gripper_command(0.0, arm)
+
+    def gripper_close(self, arm="both"):
+        """Close gripper(s). arm: 'left', 'right', or 'both'."""
+        self._send_gripper_command(0.8, arm)
+
+    def gripper_set(self, value, arm="both"):
+        """Set gripper position (0.0=open, 0.8=closed). arm: 'left', 'right', or 'both'."""
+        self._send_gripper_command(float(value), arm)
+
+    def _send_gripper_command(self, value, arm):
+        """Send gripper control command via dora output."""
+        gripper_indices = getattr(self._config, "GRIPPER_ACTUATOR_INDEX", {})
+        left_idx = gripper_indices.get("left_arm", 7)
+        right_idx = gripper_indices.get("right_arm", 15)
+
+        if arm == "left":
+            cmd = np.array([value, 0.0], dtype=np.float32)
+        elif arm == "right":
+            cmd = np.array([0.0, value], dtype=np.float32)
+        else:
+            cmd = np.array([value, value], dtype=np.float32)
+
+        self._node.send_output("gripper_control", pa.array(cmd, type=pa.float32()))
 
     def get_planning_scene_interface(self):
         """Get PlanningSceneInterface for adding/removing obstacles."""

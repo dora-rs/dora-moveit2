@@ -87,6 +87,8 @@ class MoveGroup:
 
         # Current robot state
         self._current_joints = None
+        self._raw_qpos = None
+        self._joint_callbacks = []
 
         # Execution tracking
         self._expected_exec_count = 0
@@ -158,7 +160,10 @@ class MoveGroup:
 
     def _handle_joint_positions(self, event):
         joints = event["value"].to_numpy()
+        self._raw_qpos = joints.copy()
         self._current_joints = _extract_arm_joints(joints, self._num_joints, self._arm_qpos_start)
+        for cb in self._joint_callbacks:
+            cb(self._raw_qpos)
 
     # Plan/trajectory/execution state for current operation
     _plan_done = False

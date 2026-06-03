@@ -14,10 +14,11 @@ nodes:
     path: ../hunter_arm_demo/robot_control/gen72_robot_node.py
     inputs:
       tick: dora/timer/millis/200
-      control_input: trajectory_executor/joint_commands
+      control_input: planner/trajectory        # receive full trajectory directly
     outputs:
       - joint_positions
       - joint_velocities
+      - execution_status                        # robot reports its own execution state
 
   # ===========================================
   # Planning Scene (library operator)
@@ -62,21 +63,6 @@ nodes:
       ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
 
   # ===========================================
-  # Trajectory Executor (library operator)
-  # ===========================================
-  - id: trajectory_executor
-    path: ../hunter_arm_demo/nodes/trajectory_executor.py
-    inputs:
-      trajectory: planner/trajectory
-      joint_positions: gen72_robot/joint_positions
-      tick: dora/timer/millis/200
-    outputs:
-      - joint_commands
-      - execution_status
-    env:
-      ROBOT_CONFIG_MODULE: "hunter_arm_demo.config.gen72"
-
-  # ===========================================
   # Multi-View Capture (app-specific)
   # ===========================================
   - id: capture
@@ -85,7 +71,7 @@ nodes:
       CAPTURE_OUTPUT_DIR: "../result_captures"
     inputs:
       joint_positions: gen72_robot/joint_positions
-      execution_status: trajectory_executor/execution_status
+      execution_status: gen72_robot/execution_status  # from real robot, not executor
       trajectory: planner/trajectory
       plan_status: planner/plan_status
       ik_solution: ik_solver/ik_solution

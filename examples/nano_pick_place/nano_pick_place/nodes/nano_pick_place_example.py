@@ -36,22 +36,23 @@ def main():
     print("=" * 60)
 
     # Joint configs found via FK scan of the MuJoCo model:
-    #   Ball at world [-0.04, 0.25, 0.06] (red sphere, far front-left)
+    #   Ball at world [-0.04, 0.25, 0.06] (red sphere, radius=0.024, top at z=0.084)
     #   Plate at world [0.10, 0.25, 0.04] (green cylinder, far front-right)
     #   ~14cm separation between ball and plate
     #
     # Pick configs (gripper reaches ~[-0.037, 0.25, 0.063]):
     #   q = [-0.069, 1.158, -1.553, 1.5, 0, gripper]
+    # Pick above: joint2/3/4 reduced from grasp config to raise end-effector ~5cm above ball top
     # Place configs (gripper reaches ~[0.101, 0.251, 0.057]):
     #   q = [0.621, 2.0, -1.868, -0.136, 0, gripper]
 
-    GRIPPER_OPEN = 0.0
-    GRIPPER_CLOSED = 0.5
+    GRIPPER_OPEN = -0.6
+    GRIPPER_CLOSED = 0.1
 
     # Joint goals for pick sequence
-    pick_above = [-0.069, 0.60, -0.80, 0.5, 0.0, GRIPPER_OPEN]        # above ball
-    pick_grasp = [-0.069, 1.158, -1.553, 1.5, 0.0, GRIPPER_OPEN]      # at ball
-    pick_lift  = [-0.069, 0.60, -0.80, 0.5, 0.0, GRIPPER_CLOSED]      # lift up
+    pick_above = [-0.069, -0.90, 1.20, 1.0, 0.0, GRIPPER_OPEN]        # above ball
+    pick_grasp = [-0.069, -2.00, 1.6, 1.2, 0.0, GRIPPER_OPEN]      # at ball
+    pick_lift  = [-0.069, -0.90, 1.20, 1.0, 0.0, GRIPPER_CLOSED]      # lift up
 
     # Joint goals for place sequence
     place_above = [0.621, 1.00, -1.00, 0.0, 0.0, GRIPPER_CLOSED]      # above plate
@@ -75,7 +76,7 @@ def main():
     group.go(pick_above, wait=True)
     group.stop()
     print(f"Above pick position")
-    time.sleep(0.5)
+    time.sleep(0.005)
 
     # =========================================================
     # 3. Lower to grasp
@@ -84,7 +85,7 @@ def main():
     group.go(pick_grasp, wait=True)
     group.stop()
     print("At grasp position")
-    time.sleep(0.5)
+    time.sleep(0.005)
 
     # =========================================================
     # 4. Close gripper
@@ -95,7 +96,7 @@ def main():
     group.go(joints, wait=True)
     group.stop()
     print(f"Gripper closed (joint6={GRIPPER_CLOSED})")
-    time.sleep(0.5)
+    time.sleep(0.005)
 
     # =========================================================
     # 5. Lift object
@@ -104,7 +105,7 @@ def main():
     group.go(pick_lift, wait=True)
     group.stop()
     print("Object lifted")
-    time.sleep(0.5)
+    time.sleep(0.05)
 
     # =========================================================
     # 6. Move to place location

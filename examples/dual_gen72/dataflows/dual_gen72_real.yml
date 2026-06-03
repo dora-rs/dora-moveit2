@@ -1,35 +1,35 @@
-# Dual GEN72 — REAL HARDWARE TEMPLATE
-# ====================================
-# TEMPLATE ONLY — requires 2x Realman GEN72 arms + Realman SDK.
-# NOT runnable in simulation. Without hardware + SDK, the driver
-# raises RuntimeError at startup.
+# Dual GEN72 — REAL HARDWARE
+# ===========================
+# Requires 2x Realman GEN72 arms + Realman SDK.
+# Set GEN72_LEFT_IP / GEN72_RIGHT_IP to your robots' IPs before running.
 #
-# Structural mirror of dual_gen72_mujoco.yml with mujoco_sim replaced by
-# the real-hardware driver. The 14D planner/executor pipeline is unchanged.
+# Architecture: planner → real_robot (direct, no trajectory_executor)
+# This matches the proven single-arm pattern in gen72_real.yml.
 #
-# Before running:
-#   1. Install the Realman SDK wrapper (ships with hunter_with_arm example).
-#   2. Set GEN72_LEFT_IP and GEN72_RIGHT_IP below to your robots' IPs.
-#   3. Fill in the NotImplementedError-raising methods in
-#      dual_gen72_demo/nodes/realman_dual_driver.py.
-#
-# Usage (after prerequisites are met):
+# Usage:
 #   cd examples/dual_gen72
 #   dora up
 #   dora start dataflows/dual_gen72_real.yml
 
 nodes:
+  # ===========================================
+  # Dual GEN72 Real Robot Control
+  # ===========================================
   - id: real_robot
-    path: ../dual_gen72_demo/nodes/realman_dual_driver.py
+    path: ../dual_gen72_demo/nodes/dual_gen72_real_robot_node.py
     inputs:
       tick: dora/timer/millis/200
-      control_input: trajectory_executor/joint_commands
+      control_input: planner/trajectory
     outputs:
       - joint_positions
+      - execution_status
     env:
-      GEN72_LEFT_IP: "192.168.1.18"
-      GEN72_RIGHT_IP: "192.168.1.19"
+      GEN72_LEFT_IP: "192.168.1.17"
+      GEN72_RIGHT_IP: "192.168.1.18"
 
+  # ===========================================
+  # Planning Scene
+  # ===========================================
   - id: planning_scene
     path: ../dual_gen72_demo/nodes/planning_scene.py
     inputs:
@@ -42,6 +42,9 @@ nodes:
     env:
       ROBOT_CONFIG_MODULE: "dual_gen72_demo.config.dual_gen72"
 
+  # ===========================================
+  # OMPL Motion Planner
+  # ===========================================
   - id: planner
     path: ../dual_gen72_demo/nodes/planner.py
     inputs:
@@ -53,6 +56,9 @@ nodes:
     env:
       ROBOT_CONFIG_MODULE: "dual_gen72_demo.config.dual_gen72"
 
+  # ===========================================
+  # IK Solver
+  # ===========================================
   - id: ik_solver
     path: ../dual_gen72_demo/nodes/ik_solver.py
     inputs:
@@ -63,28 +69,18 @@ nodes:
     env:
       ROBOT_CONFIG_MODULE: "dual_gen72_demo.config.dual_gen72"
 
-  - id: trajectory_executor
-    path: ../dual_gen72_demo/nodes/trajectory_executor.py
-    inputs:
-      trajectory: planner/trajectory
-      cartesian_trajectory: user_node/cartesian_trajectory
-      joint_positions: real_robot/joint_positions
-      tick: dora/timer/millis/50
-    outputs:
-      - joint_commands
-      - execution_status
-    env:
-      ROBOT_CONFIG_MODULE: "dual_gen72_demo.config.dual_gen72"
-
+  # ===========================================
+  # User Demo Node
+  # ===========================================
   - id: user_node
-    path: ../dual_gen72_demo/nodes/dual_arm_final_demo.py
+    path: ../dual_gen72_demo/nodes/dual_arm_real_demo.py
     env:
       ROBOT_CONFIG_MODULE: "dual_gen72_demo.config.dual_gen72"
     inputs:
       joint_positions: real_robot/joint_positions
       plan_status: planner/plan_status
       trajectory: planner/trajectory
-      execution_status: trajectory_executor/execution_status
+      execution_status: real_robot/execution_status
       ik_solution: ik_solver/ik_solution
       ik_status: ik_solver/ik_status
       command_result: planning_scene/command_result
@@ -92,4 +88,3 @@ nodes:
       - plan_request
       - ik_request
       - scene_command
-      - cartesian_trajectory

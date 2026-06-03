@@ -17,6 +17,7 @@ nodes:
     inputs:
       tick: dora/timer/millis/10
       control_input: trajectory_executor/joint_commands
+      gripper_control: user_node/gripper_control
     outputs:
       - joint_positions
       - joint_velocities
@@ -103,3 +104,4 @@ nodes:
       - ik_request
       - scene_command
       - cartesian_trajectory
+      - gripper_control

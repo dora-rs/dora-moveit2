@@ -1,6 +1,14 @@
 <mujoco model="nano_full">
   <compiler angle="radian" meshdir="nano_assets" />
 
+  <option gravity="0 0 -9.81" timestep="0.002" cone="elliptic" impratio="10"/>
+
+  <default>
+    <joint damping="0.5" armature="0.1" frictionloss="0.1"/>
+    <geom contype="1" conaffinity="1" condim="3" friction="1 0.5 0.01"/>
+    <position kp="50" dampratio="1" forcerange="-3.5 3.5" ctrlrange="-2.618 2.618"/>
+  </default>
+
   <asset>
     <mesh name="base_plate_layer1-v5" content_type="model/stl" file="base_plate_layer1-v5.stl" scale="0.001 0.001 0.001" />
     <mesh name="drive_motor_mount-v11-2" content_type="model/stl" file="drive_motor_mount-v11-2.stl" scale="0.001 0.001 0.001" />
@@ -126,4 +134,10 @@
       </body>
     </body>
   </body><geom name="ground" type="plane" size="1 1 0.01" rgba="0.9 0.9 0.9 1" pos="0 0 0" /><body name="target_object" pos="-0.04 0.25 0.06"><freejoint /><geom type="sphere" size="0.024" rgba="1 0 0 1" mass="0.005" /></body><geom name="place_plate" type="cylinder" size="0.04 0.003" pos="0.10 0.25 0.04" rgba="0.2 0.8 0.2 1" mass="0.1" contype="1" conaffinity="1" /><light pos="0 0 1.5" dir="0 0 -1" diffuse="0.8 0.8 0.8" /></worldbody>
-<actuator><position name="act_joint1" joint="STS3215_03a-v1_Revolute-45" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint2" joint="STS3215_03a-v1-1_Revolute-49" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint3" joint="STS3215_03a-v1-2_Revolute-51" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint4" joint="STS3215_03a-v1-3_Revolute-53" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint5" joint="STS3215_03a_Wrist_Roll-v1_Revolute-55" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint6" joint="STS3215_03a-v1-4_Revolute-57" kp="30" ctrlrange="-1.57 1.57" /></actuator></mujoco>
+<actuator><position name="act_joint1" joint="STS3215_03a-v1_Revolute-45" kp="50" dampratio="1" forcerange="-3.5 3.5" ctrlrange="-2.618 2.618" /><position name="act_joint2" joint="STS3215_03a-v1-1_Revolute-49" kp="50" dampratio="1" forcerange="-3.5 3.5" ctrlrange="-2.618 2.618" /><position name="act_joint3" joint="STS3215_03a-v1-2_Revolute-51" kp="50" dampratio="1" forcerange="-3.5 3.5" ctrlrange="-2.618 2.618" /><position name="act_joint4" joint="STS3215_03a-v1-3_Revolute-53" kp="50" dampratio="1" forcerange="-3.5 3.5" ctrlrange="-2.618 2.618" /><position name="act_joint5" joint="STS3215_03a_Wrist_Roll-v1_Revolute-55" kp="50" dampratio="1" forcerange="-3.5 3.5" ctrlrange="-2.618 2.618" /><position name="act_joint6" joint="STS3215_03a-v1-4_Revolute-57" kp="30" dampratio="1" forcerange="-3.5 3.5" ctrlrange="-1.57 1.57" /></actuator>
+
+<contact>
+  <exclude body1="robot_base" body2="Rotation_Pitch_08i-v1"/>
+</contact>
+
+</mujoco>

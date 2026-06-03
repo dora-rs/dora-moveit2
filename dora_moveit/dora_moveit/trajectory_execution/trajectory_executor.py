@@ -70,19 +70,20 @@ class TrajectoryExecutor:
     def step(self) -> Optional[np.ndarray]:
         """
         Execute one step.
-        ALWAYS output HOME position when idle to keep arm stable.
+        When idle, hold the last commanded target to resist gravity drift.
         """
 
         # =========================
         # IDLE / HOLD MODE
         # =========================
         if not self.is_executing or len(self.trajectory) == 0:
-            # Return HOME position to keep arm stable
-            if self._is_dual and self._dual_home is not None:
-                return self._dual_home.copy()
+            if self.last_command is not None:
+                return self.last_command.copy()
             return self._home_config.copy()
 
         if self.prev_waypoint is None:
+            if self.last_command is not None:
+                return self.last_command.copy()
             return self._home_config.copy()
 
         # =========================
@@ -101,14 +102,11 @@ class TrajectoryExecutor:
                 self.is_executing = False
                 print(f"[Executor] Trajectory #{self.execution_count} complete!")
 
-                # CRITICAL FIX:
-                # Do NOT output last waypoint
-                # Hold current real joint state
-                if self.current_joints is not None:
-                    self.last_command = self.current_joints.copy()
-                    return self.current_joints.copy()
-
-                return self.last_command
+                # Hold the trajectory's final waypoint as the target.
+                # Using the planned target (not current_joints) prevents
+                # gravity-induced drift accumulation.
+                self.last_command = target.copy()
+                return self.last_command.copy()
 
             target = self.trajectory[self.current_waypoint_idx]
 
@@ -127,8 +125,27 @@ class TrajectoryExecutor:
         }
 
 
-def _pad_arm_command(arm_cmd: np.ndarray, num_actuators: int, arm_actuator_start: int) -> np.ndarray:
-    """Pad arm-only command into full actuator array (zeros for non-arm actuators)."""
+def _pad_arm_command(arm_cmd: np.ndarray, num_actuators: int, arm_actuator_start: int,
+                     config=None) -> np.ndarray:
+    """Pad arm-only command into full actuator array.
+
+    For dual-arm configs with grippers interleaved (e.g. [L0-6, Lgrip, R0-6, Rgrip]),
+    maps the concatenated 14D arm command into the correct actuator slots.
+    """
+    if config is not None and hasattr(config, "ARM_ACTUATOR_START_PER_CHAIN"):
+        full_cmd = np.zeros(num_actuators, dtype=np.float32)
+        chains = getattr(config, "ARM_CHAINS", [])
+        nj = config.NUM_JOINTS
+        starts = config.ARM_ACTUATOR_START_PER_CHAIN
+        offset = 0
+        for chain_name in chains:
+            chain_start = starts[chain_name]
+            n = min(nj, len(arm_cmd) - offset)
+            if n > 0:
+                full_cmd[chain_start:chain_start + n] = arm_cmd[offset:offset + n]
+            offset += nj
+        return full_cmd
+
     if arm_actuator_start == 0 and len(arm_cmd) == num_actuators:
         return arm_cmd
     full_cmd = np.zeros(num_actuators, dtype=np.float32)
@@ -202,14 +219,14 @@ def main():
                 try:
                     # Send initial joint command on first tick
                     if first_tick:
-                        out_cmd = _pad_arm_command(executor.last_command, num_actuators, arm_actuator_start)
+                        out_cmd = _pad_arm_command(executor.last_command, num_actuators, arm_actuator_start, config=config)
                         node.send_output("joint_commands", pa.array(out_cmd, type=pa.float32()))
                         first_tick = False
 
                     command = executor.step()
 
                     if command is not None:
-                        out_cmd = _pad_arm_command(command, num_actuators, arm_actuator_start)
+                        out_cmd = _pad_arm_command(command, num_actuators, arm_actuator_start, config=config)
                         node.send_output(
                             "joint_commands",
                             pa.array(out_cmd, type=pa.float32())

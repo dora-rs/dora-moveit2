@@ -11,7 +11,7 @@ Arm kinematic chain (6 revolute joints):
   Joint 5 (Wrist_Roll):  Wrist roll, axis Y
   Joint 6 (Jaw):         Gripper, axis Z
 
-qpos layout: freejoint[0:7], wheels[7:10], arm[10:16]
+qpos layout: freejoint_obj[0:7], freejoint_base[7:14], wheels[14:17], arm[17:23]
 """
 
 import numpy as np
@@ -34,7 +34,7 @@ class LekiwiConfig:
 
     NUM_JOINTS = 6
     NUM_ACTUATORS = 9       # 3 wheel velocity + 6 arm position actuators
-    ARM_QPOS_START = 10     # arm joints start at qpos[10] (after freejoint[0:7] + 3 wheels[7:10])
+    ARM_QPOS_START = 17     # arm joints start at qpos[17] (after 2 freejoints[0:14] + 3 wheels[14:17])
     ARM_ACTUATOR_START = 3  # arm actuators start at ctrl[3] (after 3 wheel actuators)
 
     JOINT_CONFIGS = [
@@ -85,7 +85,7 @@ class LekiwiConfig:
     MAX_ACCELERATION = np.array([8.0, 8.0, 8.0, 8.0, 8.0, 8.0])
 
     # From so_arm100.xml keyframes
-    HOME_CONFIG = np.array([0.0, 0.0, 0.0, 1.57, -1.57, 0.0])
+    HOME_CONFIG = np.array([0.0, -1.75, 1.59, 1.13, 0.0, 0.0])
     SAFE_CONFIG = np.array([0.0, -1.75, 1.59, 1.13, 0.0, 0.0])
 
     NAMED_POSES = {

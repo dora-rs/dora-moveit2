@@ -20,9 +20,12 @@ nodes:
       - joint_positions
       - joint_velocities
       - sensor_data
+      - camera_image
     env:
       MODEL_NAME: "../models/hunter_se_with_arm_and_pipes.xml"
       MUJOCO_GL: "glfw"
+      CAMERA_NAME: "wrist_cam"
+      CAMERA_RATE: "10"
 
   # ===========================================
   # Vehicle Controller (app-specific)
@@ -86,6 +89,7 @@ nodes:
     path: ../hunter_arm_demo/nodes/multi_view_capture_node.py
     env:
       capture_output_dir: "../result_captures"
+      VEHICLE_MODE: "1"
 
     inputs:
       joint_positions: mujoco_sim/joint_positions
@@ -93,6 +97,7 @@ nodes:
       trajectory: planner/trajectory
       plan_status: planner/plan_status
       vehicle_ready: vehicle_controller/movement_complete
+      camera_image: mujoco_sim/camera_image
     outputs:
       - robot_state
       - plan_request

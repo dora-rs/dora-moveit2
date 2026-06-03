@@ -7,12 +7,12 @@
 
   <compiler angle="radian" meshdir="nano_assets"/>
 
-  <option gravity="0 0 -9.81" timestep="0.002"/>
+  <option gravity="0 0 -9.81" timestep="0.002" cone="elliptic" impratio="10"/>
 
   <default>
-    <joint damping="0.5" armature="0.01"/>
+    <joint damping="0.5" armature="0.1" frictionloss="0.1"/>
     <geom contype="1" conaffinity="1" condim="3" friction="1 0.5 0.01"/>
-    <position kp="50" ctrlrange="-2.618 2.618"/>
+    <position kp="50" dampratio="1" forcerange="-3.5 3.5" ctrlrange="-2.618 2.618"/>
   </default>
 
   <asset>
@@ -117,12 +117,12 @@
   </worldbody>
 
   <actuator>
-    <position name="act_joint1" joint="joint1" kp="50" ctrlrange="-2.618 2.618"/>
-    <position name="act_joint2" joint="joint2" kp="50" ctrlrange="-2.618 2.618"/>
-    <position name="act_joint3" joint="joint3" kp="50" ctrlrange="-2.618 2.618"/>
-    <position name="act_joint4" joint="joint4" kp="50" ctrlrange="-2.618 2.618"/>
-    <position name="act_joint5" joint="joint5" kp="50" ctrlrange="-2.618 2.618"/>
-    <position name="act_joint6" joint="joint6" kp="30" ctrlrange="-1.57 1.57"/>
+    <position name="act_joint1" joint="joint1" kp="50" dampratio="1" forcerange="-3.5 3.5" ctrlrange="-2.618 2.618"/>
+    <position name="act_joint2" joint="joint2" kp="50" dampratio="1" forcerange="-3.5 3.5" ctrlrange="-2.618 2.618"/>
+    <position name="act_joint3" joint="joint3" kp="50" dampratio="1" forcerange="-3.5 3.5" ctrlrange="-2.618 2.618"/>
+    <position name="act_joint4" joint="joint4" kp="50" dampratio="1" forcerange="-3.5 3.5" ctrlrange="-2.618 2.618"/>
+    <position name="act_joint5" joint="joint5" kp="50" dampratio="1" forcerange="-3.5 3.5" ctrlrange="-2.618 2.618"/>
+    <position name="act_joint6" joint="joint6" kp="30" dampratio="1" forcerange="-3.5 3.5" ctrlrange="-1.57 1.57"/>
   </actuator>
 
   <keyframe>
