@@ -175,6 +175,7 @@ class MoveGroup:
     _plan_trajectory = None
     _exec_done = False
     _exec_success = False
+    _pending_pose_plan = False  # async IK in flight; plan fires on ik_solution
     _ik_done = False
     _ik_success = False
     _ik_solution = None
@@ -230,6 +231,11 @@ class MoveGroup:
             self._ik_solution = solution[:self._num_joints].copy()
             self._ik_success = True
             self._ik_done = True
+            if self._pending_pose_plan:
+                self._pending_pose_plan = False
+                self._target_joints = np.asarray(self._ik_solution, dtype=float)
+                self._target_pose = None
+                self._send_plan_request()
 
     def _handle_ik_status(self, event):
         status = _decode_json(event["value"])
@@ -237,6 +243,11 @@ class MoveGroup:
             self._ik_success = False
             self._ik_message = status.get("message", "IK failed")
             self._ik_done = True
+            if self._pending_pose_plan:
+                self._pending_pose_plan = False
+                self._plan_success = False
+                self._plan_message = self._ik_message or "IK failed for pose target"
+                self._plan_done = True
 
     def _handle_command_result(self, event):
         try:
@@ -247,6 +258,63 @@ class MoveGroup:
         self._scene_done = True
 
     # ==================== Joint-space motion ==================== #
+
+    def _send_plan_request(self):
+        """Build and send a plan_request for the current _target_joints.
+
+        Shared by the blocking go() and the non-blocking begin_motion_async().
+        The caller is responsible for resetting the plan/exec flags first.
+        """
+        self._expected_exec_count += 1
+        request = {
+            "start": np.asarray(self._current_joints, dtype=float).tolist(),
+            "goal": np.asarray(self._target_joints, dtype=float).tolist(),
+            "planner": self._planner_id,
+            "max_time": self._planning_time,
+        }
+        self._node.send_output("plan_request", _encode_json(request))
+
+    def begin_motion_async(self, joint_goal=None):
+        """Non-blocking motion: fire the plan (and IK first for pose targets) and
+        return immediately — never re-enters node.next(). Completion is observed
+        via the _plan_*/_exec_* flags as events arrive through handle_event().
+
+        For a pose target the IK solve is deferred too: ik_request is sent now and
+        _handle_ik_solution fires the plan_request when the solution arrives; an IK
+        failure latches _plan_done/_plan_success=False so callers see "failed".
+        """
+        if joint_goal is not None:
+            self.set_joint_value_target(joint_goal)
+        if self._current_joints is None:
+            raise RuntimeError("No joint state received yet.")
+
+        # Reset operation state (mirrors go()).
+        self._plan_done = False
+        self._plan_success = False
+        self._plan_trajectory = None
+        self._exec_done = False
+        self._exec_success = False
+
+        if self._target_joints is None and self._target_pose is not None:
+            # Async IK: the ik_solution callback will fire the plan_request.
+            self._ik_done = False
+            self._ik_success = False
+            self._ik_solution = None
+            self._ik_message = ""
+            self._pending_pose_plan = True
+            self._node.send_output(
+                "ik_request",
+                pa.array(np.asarray(self._target_pose, dtype=np.float32),
+                         type=pa.float32()),
+            )
+            return
+
+        if self._target_joints is None:
+            raise RuntimeError(
+                "No target set. Call set_joint_value_target() or "
+                "set_named_target() first."
+            )
+        self._send_plan_request()
 
     def go(self, joint_goal=None, wait=True, timeout=30.0):
         """Plan and execute motion to a joint-space goal.
@@ -284,17 +352,9 @@ class MoveGroup:
         self._plan_trajectory = None
         self._exec_done = False
         self._exec_success = False
-        # Increment exec count: planner will send trajectory to executor via dataflow
-        self._expected_exec_count += 1
-
-        # Send plan request
-        request = {
-            "start": np.asarray(self._current_joints, dtype=float).tolist(),
-            "goal": np.asarray(self._target_joints, dtype=float).tolist(),
-            "planner": self._planner_id,
-            "max_time": self._planning_time,
-        }
-        self._node.send_output("plan_request", _encode_json(request))
+        # Increment exec count + send plan request (planner forwards trajectory
+        # to the executor via the dataflow).
+        self._send_plan_request()
 
         if not wait:
             return True
