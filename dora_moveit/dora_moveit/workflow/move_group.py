@@ -282,6 +282,10 @@ class MoveGroup:
         For a pose target the IK solve is deferred too: ik_request is sent now and
         _handle_ik_solution fires the plan_request when the solution arrives; an IK
         failure latches _plan_done/_plan_success=False so callers see "failed".
+
+        Single-in-flight is the caller's responsibility: calling this again before
+        the prior motion completes resets state and is not self-protected (the
+        runtime enforces single-in-flight one layer up).
         """
         if joint_goal is not None:
             self.set_joint_value_target(joint_goal)
@@ -292,6 +296,7 @@ class MoveGroup:
         self._plan_done = False
         self._plan_success = False
         self._plan_trajectory = None
+        self._plan_message = ""
         self._exec_done = False
         self._exec_success = False
 
@@ -350,6 +355,7 @@ class MoveGroup:
         self._plan_done = False
         self._plan_success = False
         self._plan_trajectory = None
+        self._plan_message = ""
         self._exec_done = False
         self._exec_success = False
         # Increment exec count + send plan request (planner forwards trajectory
