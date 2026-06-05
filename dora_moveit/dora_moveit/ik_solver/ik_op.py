@@ -366,8 +366,13 @@ def main():
             elif input_id == "ik_request":
                 try:
                     value = event["value"]
-                    # Check if this is a JSON dual-arm request
-                    if hasattr(value, 'to_pylist'):
+                    # ik_request is either a uint8 JSON payload (dual-arm request)
+                    # or a float32 pose array (single-arm). Dispatch on arrow type:
+                    # a float array has to_pylist() too, but bytes(floats) crashes,
+                    # so the float case must be checked first and decoded via numpy.
+                    if hasattr(value, 'type') and pa.types.is_floating(value.type):
+                        raw = value.to_numpy()
+                    elif hasattr(value, 'to_pylist'):
                         raw = bytes(value.to_pylist())
                     elif hasattr(value, 'to_numpy'):
                         raw = value.to_numpy()
