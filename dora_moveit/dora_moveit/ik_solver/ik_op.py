@@ -30,6 +30,16 @@ from dora_moveit.config import is_dual_arm, get_arm_config
 from dora_moveit.ik_solver.advanced_ik_solver import TracIKSolver, DifferentialEvolutionIKSolver, IKRequest, IKResult
 
 
+def _json_default(o):
+    """Coerce numpy scalars/arrays so json.dumps can serialize IK status dicts
+    (the solvers return numpy bools/floats that are not JSON-serializable)."""
+    if isinstance(o, np.generic):
+        return o.item()
+    if isinstance(o, np.ndarray):
+        return o.tolist()
+    raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
+
+
 class NumericalIKSolver:
     """
     Numerical IK solver using Jacobian pseudo-inverse method.
@@ -406,7 +416,7 @@ def main():
                                     result["error"] = status.get("message", "IK failed")
                                     break
 
-                        result_bytes = json.dumps(result).encode('utf-8')
+                        result_bytes = json.dumps(result, default=_json_default).encode('utf-8')
                         node.send_output("ik_status", pa.array(list(result_bytes), type=pa.uint8()))
 
                         if result["success"] and combined_solution:
@@ -429,7 +439,7 @@ def main():
 
                         solution, status = ik_op.process_ik_request(pose)
 
-                        status_bytes = json.dumps(status).encode('utf-8')
+                        status_bytes = json.dumps(status, default=_json_default).encode('utf-8')
                         node.send_output("ik_status", pa.array(list(status_bytes), type=pa.uint8()))
 
                         if solution is not None:
