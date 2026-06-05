@@ -19,6 +19,7 @@ Dora Integration:
 """
 
 import json
+import os
 import numpy as np
 import pyarrow as pa
 from dataclasses import dataclass
