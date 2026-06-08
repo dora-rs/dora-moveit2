@@ -40,13 +40,13 @@ class SO101Config:
     # object freejoint = qpos[0:7], arm = qpos[7:12], gripper = qpos[12:]
     ARM_QPOS_START = 7
 
-    # 5 arm joints (STS3215). Ranges are placeholders — sync from the SO101 MJCF.
+    # 5 arm joints (STS3215). Ranges from SO-ARM100/Simulation/SO101/so101_new_calib.xml.
     JOINT_CONFIGS = [
-        JointConfig("shoulder_pan",  -2.0, 2.0, 3.0, 10.0),
-        JointConfig("shoulder_lift", -1.75, 1.75, 3.0, 10.0),
-        JointConfig("elbow_flex",    -1.69, 1.69, 3.0, 10.0),
-        JointConfig("wrist_flex",    -1.66, 1.66, 3.0, 10.0),
-        JointConfig("wrist_roll",    -2.79, 2.79, 3.0, 10.0),
+        JointConfig("shoulder_pan",  -1.91986, 1.91986, 3.0, 3.35),
+        JointConfig("shoulder_lift", -1.74533, 1.74533, 3.0, 3.35),
+        JointConfig("elbow_flex",    -1.69, 1.69, 3.0, 3.35),
+        JointConfig("wrist_flex",    -1.65806, 1.65806, 3.0, 3.35),
+        JointConfig("wrist_roll",    -2.74385, 2.84121, 3.0, 3.35),
     ]
 
     JOINT_LOWER_LIMITS = np.array([j.lower_limit for j in JOINT_CONFIGS])
