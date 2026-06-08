@@ -29,7 +29,7 @@ class TrajectoryExecutor:
         self.prev_waypoint: Optional[np.ndarray] = None
 
         self.interpolation_progress = 0.0
-        self.interpolation_speed = float(os.getenv("EXEC_INTERP_SPEED", "0.1"))
+        self.interpolation_speed = float(os.getenv("EXEC_INTERP_SPEED", "0.3"))
 
         self.is_executing = False
         self.execution_count = 0
