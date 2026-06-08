@@ -117,7 +117,7 @@
                 <!-- Grasp/IK reference. Mirrors the SO101 'gripperframe' (the designed TCP)
                      so local z = the jaw approach axis; the skill aligns it to world -z.
                      TUNE pos on epyc against live FK. -->
-                <site name="pinch" pos="-0.0079 -0.000218 -0.0981" quat="0.707107 0 0.707107 0" type="sphere" group="5" size="0.005" rgba="0.9 0.9 0.9 1"/>
+                <site name="pinch" pos="0.006 -0.000218 -0.085" quat="0.707107 0 0.707107 0" type="sphere" group="5" size="0.005" rgba="0.9 0.9 0.9 1"/>
                 <body name="moving_jaw_so101_v1" pos="0.0202 0.0188 -0.0234" quat="0.707107 0.707107 0 0">
                   <joint axis="0 0 1" name="gripper" type="hinge" range="-0.17453 1.74533" class="sts3215"/>
                   <inertial pos="-0.00157495 -0.0300244 0.0192755" mass="0.012" fullinertia="6.61427e-06 1.89032e-06 5.28738e-06 -3.19807e-07 -5.90717e-09 -1.09945e-07"/>
