@@ -25,6 +25,14 @@ class UR5eConfig:
     # Number of joints
     NUM_JOINTS = 6
 
+    # The MuJoCo pick-and-place scene (models/ur5e.xml) declares a free-jointed
+    # `red_ball` BEFORE the arm, so the arm's 6 joints live at qpos[7:13]
+    # (ball freejoint = qpos[0:7], gripper = qpos[13:21]). Without this, the
+    # _extract_arm_joints fallback (len(qpos)>=20 -> qpos[13:19]) reads the
+    # GRIPPER joints as the arm state, corrupting planning/execution start-state
+    # so the arm never tracks commanded targets.
+    ARM_QPOS_START = 7
+
     # Joint limits (from URDF / Menagerie)
     JOINT_CONFIGS = [
         JointConfig("shoulder_pan_joint",  -6.2832, 6.2832, 3.1416, 150.0),

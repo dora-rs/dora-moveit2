@@ -8,6 +8,7 @@ Interpolates between waypoints for smooth motion.
 """
 
 import json
+import os
 import numpy as np
 import pyarrow as pa
 from typing import List, Optional
@@ -28,7 +29,7 @@ class TrajectoryExecutor:
         self.prev_waypoint: Optional[np.ndarray] = None
 
         self.interpolation_progress = 0.0
-        self.interpolation_speed = 0.1
+        self.interpolation_speed = float(os.getenv("EXEC_INTERP_SPEED", "0.1"))
 
         self.is_executing = False
         self.execution_count = 0
@@ -70,16 +71,24 @@ class TrajectoryExecutor:
     def step(self) -> Optional[np.ndarray]:
         """
         Execute one step.
-        ALWAYS output HOME position when idle to keep arm stable.
+        When idle, HOLD the last commanded / current joint state so a completed
+        move stays put. (Previously this returned HOME every idle tick, which
+        snapped the arm back home immediately after every trajectory — the
+        completion-time "hold current_joints" below was defeated by the very next
+        idle tick.) HOME is only the boot fallback before any motion/feedback.
         """
 
         # =========================
         # IDLE / HOLD MODE
         # =========================
         if not self.is_executing or len(self.trajectory) == 0:
-            # Return HOME position to keep arm stable
+            # Hold position rather than snapping HOME.
+            if self.last_command is not None:
+                return self.last_command.copy()
             if self._is_dual and self._dual_home is not None:
                 return self._dual_home.copy()
+            if self.current_joints is not None:
+                return self.current_joints.copy()
             return self._home_config.copy()
 
         if self.prev_waypoint is None:
