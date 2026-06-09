@@ -66,8 +66,10 @@
     <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="groundplane"/>
 
     <!-- ===== Free object FIRST so its freejoint owns qpos[0:7] ===== -->
-    <!-- Small red cube (half 0.012 = 24mm) within the small SO-101 reach. -->
-    <body name="red_cube" pos="0.17 0.0 0.02">
+    <!-- Small red cube (half 0.012 = 24mm) within the small SO-101 reach. Starts at
+         x=0.22 — clearly OUTSIDE the green plate (plate center 0.12, radius 0.03 -> edge
+         0.15) so the demo visibly picks it from one spot and places it onto the plate. -->
+    <body name="red_cube" pos="0.22 0.0 0.02">
       <freejoint name="cube_joint"/>
       <inertial pos="0 0 0" mass="0.02" diaginertia="0.0008 0.0008 0.0008"/>
       <geom condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001"
@@ -163,7 +165,7 @@
        TUNE the arm pose + gripper open/closed on epyc. -->
   <keyframe>
     <key name="home"
-         qpos="0.17 0.0 0.02 1 0 0 0
+         qpos="0.22 0.0 0.02 1 0 0 0
                0.0 -1.0 1.0 0.8 0.0
                1.0"
          ctrl="0.0 -1.0 1.0 0.8 0.0 1.0"/>
