@@ -172,15 +172,22 @@ class GraspWeld:
     """Generic, opt-in 'attach object on gripper close' for sim grasping.
 
     Some grippers (e.g. a small single rotating jaw) can't form a stable top-down
-    rigid grasp in MuJoCo — the jaw plows the object instead of clamping it. When a
-    model declares an (initially inactive) weld equality, enabling GRASP_WELD=1 lets
-    this helper latch that weld the moment the gripper actuator is commanded closed
-    and the welded bodies are within reach, and release it on open. The latch freezes
-    the *current* relative pose, so the object sticks wherever it sits at close time.
+    rigid grasp in MuJoCo — the jaw plows the object instead of clamping it. When
+    GRASP_WELD=1 and the model declares a <weld> equality (used here only to name the
+    two bodies), this helper attaches the object to the gripper the moment the gripper
+    actuator is commanded closed and the bodies are within reach, and releases it on
+    open.
+
+    The attach is KINEMATIC, not a constraint: while grasped, the object's free joint
+    is driven directly to the gripper pose ∘ (captured relative pose) every step, and
+    its velocity is zeroed. This is deliberately NOT the MuJoCo weld equality — a weld
+    with a small relpose residual fights the solver during a multi-waypoint carry and
+    can blow the physics up (NaN -> the sim node dies and the dataflow restart-loops).
+    Kinematic attach has no solver forces, so it is rock-solid through the carry.
 
     All robot-specifics come from env (so the sim node stays generic):
       GRASP_WELD=1                enable
-      GRASP_WELD_EQ=grasp_weld    name of the <weld> equality in the model
+      GRASP_WELD_EQ=grasp_weld    name of the <weld> equality (names body1/body2)
       GRASP_CTRL_INDEX=5          actuator index of the gripper
       GRASP_CLOSE_CTRL=-0.12      gripper ctrl value that means "closed"
       GRASP_OPEN_CTRL=1.5         gripper ctrl value that means "open"
@@ -206,53 +213,63 @@ class GraspWeld:
         # midpoint decides closed vs open regardless of which extreme is "closed"
         self._mid = 0.5 * (self.close_ctrl + self.open_ctrl)
         self._close_is_low = self.close_ctrl < self.open_ctrl
-        # weld bodies (eq_obj1/2 are body ids for a weld)
+        # weld bodies (eq_obj1/2 are body ids for a weld): b1=gripper, b2=object
         self.b1 = int(model.eq_obj1id[self.eq_id])
         self.b2 = int(model.eq_obj2id[self.eq_id])
+        # object must be a free body; resolve its free-joint qpos/qvel addresses so we
+        # can drive its pose directly while grasped.
+        jadr = int(model.body_jntadr[self.b2])
+        self.obj_qadr = int(model.jnt_qposadr[jadr]) if jadr >= 0 else -1
+        self.obj_dofadr = int(model.jnt_dofadr[jadr]) if jadr >= 0 else -1
+        if jadr < 0 or model.jnt_type[jadr] != mujoco.mjtJoint.mjJNT_FREE:
+            print(f"  [GraspWeld] WARNING: body2 has no free joint — disabled")
+            self.enabled = False
+            return
         self.active = False
-        print(f"  [GraspWeld] enabled: eq='{eq_name}' grip_ctrl[{self.grip_idx}] "
+        self._rel_pos = None   # object origin in gripper frame, captured at latch
+        self._rel_quat = None  # object orientation in gripper frame
+        print(f"  [GraspWeld] enabled (kinematic): eq='{eq_name}' grip_ctrl[{self.grip_idx}] "
               f"close={self.close_ctrl} open={self.open_ctrl} prox={self.proximity}m "
               f"bodies=({self.b1},{self.b2})")
-
-    def _set_active(self, on: bool):
-        val = 1 if on else 0
-        # MuJoCo moved runtime toggling from model.eq_active to data.eq_active
-        if hasattr(self.data, "eq_active"):
-            self.data.eq_active[self.eq_id] = val
-        else:  # older MuJoCo
-            self.model.eq_active[self.eq_id] = val
-        self.active = on
 
     def _commanded_closed(self) -> bool:
         c = self.data.ctrl[self.grip_idx]
         return c <= self._mid if self._close_is_low else c >= self._mid
 
     def update(self):
+        """Called every physics step, before mj_step."""
         if not self.enabled:
             return
         closed = self._commanded_closed()
         if closed and not self.active:
             d = float(np.linalg.norm(self.data.xpos[self.b1] - self.data.xpos[self.b2]))
             if d <= self.proximity:
-                # Freeze the current relative pose of body2 in body1's frame into the
-                # weld's relpose so the object holds where it is (no snap to a default).
-                p1, R1 = self.data.xpos[self.b1], self.data.xmat[self.b1].reshape(3, 3)
-                p2, q2 = self.data.xpos[self.b2], self.data.xquat[self.b2]
+                # capture the object's current pose relative to the gripper frame
+                p1 = self.data.xpos[self.b1]
+                R1 = self.data.xmat[self.b1].reshape(3, 3)
                 q1 = self.data.xquat[self.b1]
-                relpos = R1.T @ (p2 - p1)
-                relquat = np.zeros(4)
+                p2 = self.data.xpos[self.b2]
+                q2 = self.data.xquat[self.b2]
+                self._rel_pos = R1.T @ (p2 - p1)
+                self._rel_quat = np.zeros(4)
                 qneg = np.array([q1[0], -q1[1], -q1[2], -q1[3]])
-                mujoco.mju_mulQuat(relquat, qneg, q2)
-                self.model.eq_data[self.eq_id, 0:3] = 0.0          # anchor
-                self.model.eq_data[self.eq_id, 3:6] = relpos       # relpose position
-                self.model.eq_data[self.eq_id, 6:10] = relquat     # relpose quaternion
-                if self.model.eq_data.shape[1] > 10:
-                    self.model.eq_data[self.eq_id, 10] = 1.0        # torquescale
-                self._set_active(True)
+                mujoco.mju_mulQuat(self._rel_quat, qneg, q2)
+                self.active = True
                 print(f"  [GraspWeld] latched (dist={d*1000:.0f}mm)")
         elif (not closed) and self.active:
-            self._set_active(False)
+            self.active = False
             print("  [GraspWeld] released")
+
+        if self.active:
+            # kinematically drive the object to gripper_pose ∘ rel_pose, zero its velocity
+            p1 = self.data.xpos[self.b1]
+            R1 = self.data.xmat[self.b1].reshape(3, 3)
+            q1 = self.data.xquat[self.b1]
+            self.data.qpos[self.obj_qadr:self.obj_qadr + 3] = p1 + R1 @ self._rel_pos
+            cq = np.zeros(4)
+            mujoco.mju_mulQuat(cq, q1, self._rel_quat)
+            self.data.qpos[self.obj_qadr + 3:self.obj_qadr + 7] = cq
+            self.data.qvel[self.obj_dofadr:self.obj_dofadr + 6] = 0.0
 
 
 class MuJoCoSimulator:
