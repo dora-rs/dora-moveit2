@@ -1,0 +1,104 @@
+# Nano Pick-and-Place — ADORA1 Nano 6-DOF Arm in MuJoCo
+# ======================================================
+# MoveGroup API demo with SO_ARM100 arm.
+#
+# Usage:
+#   cd examples/nano_pick_place
+#   dora up
+#   dora start dataflows/nano_pick_place_mujoco.yml
+
+nodes:
+  # ===========================================
+  # MuJoCo Simulation (Nano arm)
+  # ===========================================
+  - id: mujoco_sim
+    path: ../../../dora-mujoco/dora_mujoco/main_viewer.sh
+    inputs:
+      tick: dora/timer/millis/10
+      control_input: trajectory_executor/joint_commands
+    outputs:
+      - joint_positions
+      - joint_velocities
+      - sensor_data
+    env:
+      MODEL_NAME: ../models/nano_full.xml
+      MUJOCO_GL: "glfw"
+
+  # ===========================================
+  # Planning Scene (library operator)
+  # ===========================================
+  - id: planning_scene
+    path: ../nano_pick_place/nodes/planning_scene.py
+    inputs:
+      robot_state: mujoco_sim/joint_positions
+      scene_command: user_node/scene_command
+      tick: dora/timer/millis/5000
+    outputs:
+      - scene_update
+      - command_result
+    env:
+      ROBOT_CONFIG_MODULE: "nano_pick_place.config.nano"
+
+  # ===========================================
+  # OMPL Motion Planner (library operator)
+  # ===========================================
+  - id: planner
+    path: ../nano_pick_place/nodes/planner.py
+    inputs:
+      plan_request: user_node/plan_request
+      scene_update: planning_scene/scene_update
+    outputs:
+      - trajectory
+      - plan_status
+    env:
+      ROBOT_CONFIG_MODULE: "nano_pick_place.config.nano"
+
+  # ===========================================
+  # IK Solver (library operator)
+  # ===========================================
+  - id: ik_solver
+    path: ../nano_pick_place/nodes/ik_solver.py
+    inputs:
+      ik_request: user_node/ik_request
+    outputs:
+      - ik_solution
+      - ik_status
+    env:
+      ROBOT_CONFIG_MODULE: "nano_pick_place.config.nano"
+
+  # ===========================================
+  # Trajectory Executor (library operator)
+  # ===========================================
+  - id: trajectory_executor
+    path: ../nano_pick_place/nodes/trajectory_executor.py
+    inputs:
+      trajectory: planner/trajectory
+      cartesian_trajectory: user_node/cartesian_trajectory
+      joint_positions: mujoco_sim/joint_positions
+      tick: dora/timer/millis/50
+    outputs:
+      - joint_commands
+      - execution_status
+    env:
+      ROBOT_CONFIG_MODULE: "nano_pick_place.config.nano"
+
+  # ===========================================
+  # MoveGroup Example (user application)
+  # ===========================================
+  - id: user_node
+    path: ../nano_pick_place/nodes/nano_pick_place_example.py
+    env:
+      ROBOT_CONFIG_MODULE: "nano_pick_place.config.nano"
+    inputs:
+      joint_positions: mujoco_sim/joint_positions
+      plan_status: planner/plan_status
+      trajectory: planner/trajectory
+      execution_status: trajectory_executor/execution_status
+      ik_solution: ik_solver/ik_solution
+      ik_status: ik_solver/ik_status
+      command_result: planning_scene/command_result
+    outputs:
+      - plan_request
+      - ik_request
+      - scene_command
+      - cartesian_trajectory

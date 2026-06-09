@@ -62,11 +62,11 @@
       <default class="gripper_collision">
         <geom type="mesh" group="3"/>
         <default class="pad_box1">
-          <geom mass="0" type="box" pos="0 -0.0026 0.028125" size="0.011 0.004 0.009375" friction="0.7"
+          <geom mass="0" type="box" pos="0 -0.0026 0.028125" size="0.011 0.004 0.009375" friction="1.0"
             solimp="0.95 0.99 0.001" solref="0.004 1" priority="1" rgba="0.55 0.55 0.55 1"/>
         </default>
         <default class="pad_box2">
-          <geom mass="0" type="box" pos="0 -0.0026 0.009375" size="0.011 0.004 0.009375" friction="0.6"
+          <geom mass="0" type="box" pos="0 -0.0026 0.009375" size="0.011 0.004 0.009375" friction="1.0"
             solimp="0.95 0.99 0.001" solref="0.004 1" priority="1" rgba="0.45 0.45 0.45 1"/>
         </default>
       </default>
@@ -137,8 +137,12 @@
         condim="4" priority="1"/>
     </body>
 
-    <!-- Place target marker (green circle on ground) -->
-    <site name="place_target" pos="0.35 0.25 0.001" size="0.05 0.001" type="cylinder"
+    <!-- Place target marker (green circle on ground). At (0.25,0) — directly in
+         front of the base on the pick heading — so the carry is purely radial (no
+         base-pan rotation); the gripper stays level and reliably places the ball
+         on the marker. A sideways target needs a base swing that the cradle grasp
+         can't hold through. -->
+    <site name="place_target" pos="0.25 0.0 0.001" size="0.05 0.001" type="cylinder"
       rgba="0.1 0.8 0.1 0.5"/>
 
     <!-- ============ UR5e Arm ============ -->
@@ -343,8 +347,11 @@
     <general name="actuator_wrist_3"       joint="wrist_3_joint"      gaintype="fixed" biastype="affine"
       ctrlrange="-6.2832 6.2832" gainprm="500"  biasprm="0 -500 -100"  forcerange="-28 28"/>
 
-    <!-- Robotiq 2F-85: single actuator controlling both fingers via tendon -->
-    <general class="2f85" name="fingers_actuator" tendon="split" forcerange="-5 5" ctrlrange="0 255"
+    <!-- Robotiq 2F-85: single actuator controlling both fingers via tendon.
+         forcerange bumped -5..5 -> -80..80 N: 5 N was a weak cradle (held the ball
+         against gravity but it slipped out under the lateral load of a base swing);
+         a firm clamp survives the carry to a sideways target. -->
+    <general class="2f85" name="fingers_actuator" tendon="split" forcerange="-150 150" ctrlrange="0 255"
       gainprm="0.3137255 0 0" biasprm="0 -100 -10"/>
   </actuator>
 

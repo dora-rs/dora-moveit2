@@ -19,13 +19,25 @@ Dora Integration:
 """
 
 import json
+import os
 import numpy as np
 import pyarrow as pa
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
 from dora import Node
 from dora_moveit.config import load_config
+from dora_moveit.config import is_dual_arm, get_arm_config
 from dora_moveit.ik_solver.advanced_ik_solver import TracIKSolver, DifferentialEvolutionIKSolver, IKRequest, IKResult
+
+
+def _json_default(o):
+    """Coerce numpy scalars/arrays so json.dumps can serialize IK status dicts
+    (the solvers return numpy bools/floats that are not JSON-serializable)."""
+    if isinstance(o, np.generic):
+        return o.item()
+    if isinstance(o, np.ndarray):
+        return o.tolist()
+    raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
 
 
 class NumericalIKSolver:
@@ -95,11 +107,19 @@ class NumericalIKSolver:
             return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
 
         def rot_axis(angle, axis):
-            if axis[2] != 0:
-                return rot_z(angle)
-            elif axis[1] != 0:
-                return rot_y(angle)
-            return rot_x(angle)
+            ax = np.array(axis, dtype=float)
+            norm = np.linalg.norm(ax)
+            if norm < 1e-10:
+                return np.eye(3)
+            ax = ax / norm
+            if abs(ax[0]) < 1e-6 and abs(ax[1]) < 1e-6:
+                return rot_z(angle * np.sign(ax[2]))
+            if abs(ax[0]) < 1e-6 and abs(ax[2]) < 1e-6:
+                return rot_y(angle * np.sign(ax[1]))
+            if abs(ax[1]) < 1e-6 and abs(ax[2]) < 1e-6:
+                return rot_x(angle * np.sign(ax[0]))
+            K = np.array([[0, -ax[2], ax[1]], [ax[2], 0, -ax[0]], [-ax[1], ax[0], 0]])
+            return np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
 
         T = np.eye(4)
 
@@ -335,8 +355,10 @@ def main():
 
     node = Node()
     config = load_config()
-    # Use TracIK solver by default (can be changed to "de" or "simple")
-    ik_op = IKOperator(num_joints=config.NUM_JOINTS, solver_type="tracik")
+    # Solver selectable via IK_SOLVER_TYPE env (default "tracik" for back-compat).
+    # "de" / "simple" use the pure-numpy NumericalIKSolver — no tracikpy needed.
+    solver_type = os.environ.get("IK_SOLVER_TYPE", "tracik")
+    ik_op = IKOperator(num_joints=config.NUM_JOINTS, solver_type=solver_type)
 
     print("IK operator started, waiting for requests...")
     
@@ -352,27 +374,87 @@ def main():
                 ik_op.process_joint_state(joints)
                 
             elif input_id == "ik_request":
-                # Process IK request
-                pose = event["value"].to_numpy()
-                
-                print(f"[IK] Request #{ik_op.request_count + 1}: target={pose[:3]}")
-                
-                solution, status = ik_op.process_ik_request(pose)
-                
-                # Send status
-                status_bytes = json.dumps(status).encode('utf-8')
-                node.send_output("ik_status", pa.array(list(status_bytes), type=pa.uint8()))
-                
-                # Send solution if successful
-                if solution is not None:
-                    node.send_output(
-                        "ik_solution",
-                        pa.array(solution, type=pa.float32()),
-                        metadata={"encoding": "jointstate", "success": True}
-                    )
-                    print(f"[IK] SUCCESS: Solution found, error={status['error']:.6f}")
-                else:
-                    print(f"[IK] FAILED: {status['message']}")
+                try:
+                    value = event["value"]
+                    # ik_request is either a uint8 JSON payload (dual-arm request)
+                    # or a float32 pose array (single-arm). Dispatch on arrow type:
+                    # a float array has to_pylist() too, but bytes(floats) crashes,
+                    # so the float case must be checked first and decoded via numpy.
+                    if hasattr(value, 'type') and pa.types.is_floating(value.type):
+                        raw = value.to_numpy()
+                    elif hasattr(value, 'to_pylist'):
+                        raw = bytes(value.to_pylist())
+                    elif hasattr(value, 'to_numpy'):
+                        raw = value.to_numpy()
+                    else:
+                        raw = value
+
+                    # Try JSON parse for dual-arm request
+                    dual_request = None
+                    if isinstance(raw, (bytes, bytearray)):
+                        try:
+                            dual_request = json.loads(raw.decode('utf-8'))
+                        except (json.JSONDecodeError, UnicodeDecodeError):
+                            pass
+
+                    if dual_request and ("left_pose" in dual_request or "right_pose" in dual_request):
+                        # Dual IK request
+                        print(f"[IK] Dual request #{ik_op.request_count + 1}")
+                        result = {"success": True}
+                        combined_solution = []
+
+                        for arm_key in ("left_pose", "right_pose"):
+                            if arm_key in dual_request:
+                                pose = np.array(dual_request[arm_key], dtype=np.float32)
+                                solution, status = ik_op.process_ik_request(pose)
+                                joint_key = arm_key.replace("_pose", "_joints")
+                                if solution is not None:
+                                    result[joint_key] = solution.tolist() if hasattr(solution, 'tolist') else list(solution)
+                                    combined_solution.extend(result[joint_key])
+                                else:
+                                    result["success"] = False
+                                    result["error"] = status.get("message", "IK failed")
+                                    break
+
+                        result_bytes = json.dumps(result, default=_json_default).encode('utf-8')
+                        node.send_output("ik_status", pa.array(list(result_bytes), type=pa.uint8()))
+
+                        if result["success"] and combined_solution:
+                            node.send_output(
+                                "ik_solution",
+                                pa.array(np.array(combined_solution, dtype=np.float32), type=pa.float32()),
+                                metadata={"encoding": "jointstate", "success": True, "dual": True}
+                            )
+                            print(f"[IK] Dual SUCCESS")
+                        else:
+                            print(f"[IK] Dual FAILED: {result.get('error', 'unknown')}")
+                    else:
+                        # Single-arm IK request (original path)
+                        if isinstance(raw, np.ndarray):
+                            pose = raw
+                        else:
+                            pose = event["value"].to_numpy()
+
+                        print(f"[IK] Request #{ik_op.request_count + 1}: target={pose[:3]}")
+
+                        solution, status = ik_op.process_ik_request(pose)
+
+                        status_bytes = json.dumps(status, default=_json_default).encode('utf-8')
+                        node.send_output("ik_status", pa.array(list(status_bytes), type=pa.uint8()))
+
+                        if solution is not None:
+                            node.send_output(
+                                "ik_solution",
+                                pa.array(solution, type=pa.float32()),
+                                metadata={"encoding": "jointstate", "success": True}
+                            )
+                            print(f"[IK] SUCCESS: Solution found, error={status['error']:.6f}")
+                        else:
+                            print(f"[IK] FAILED: {status['message']}")
+                except Exception as e:
+                    print(f"[IK] Error processing request: {e}")
+                    import traceback
+                    traceback.print_exc()
                     
         elif event_type == "STOP":
             print("IK operator stopping...")

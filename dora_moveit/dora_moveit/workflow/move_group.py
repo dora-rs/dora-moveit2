@@ -45,10 +45,13 @@ def _decode_json(value) -> dict:
     return json.loads(raw.decode("utf-8"))
 
 
-def _extract_arm_joints(joints: np.ndarray, num_joints: int = 6) -> np.ndarray:
-    """Extract arm joint positions from full qpos array.
-    Handles hunter model (20+ qpos, arm at 13:13+n) and standalone arm (+gripper)."""
+def _extract_arm_joints(joints: np.ndarray, num_joints: int = 6,
+                        arm_qpos_start: int = 0) -> np.ndarray:
+    """Extract arm joint positions from full qpos array."""
+    if arm_qpos_start > 0:
+        return joints[arm_qpos_start:arm_qpos_start + num_joints].copy()
     if len(joints) >= 20:
+        # Legacy: Hunter model — arm at qpos[13:13+n]
         return joints[13:13 + num_joints].copy()
     return joints[:num_joints].copy()
 
@@ -65,10 +68,11 @@ class MoveGroup:
     inside each blocking method.
     """
 
-    def __init__(self, group_name: str = "gen72"):
+    def __init__(self, group_name: str = "gen72", node=None):
         self._group_name = group_name
         self._config = load_config()
         self._num_joints = self._config.NUM_JOINTS
+        self._arm_qpos_start = getattr(self._config, "ARM_QPOS_START", 0)
 
         # Planner settings
         self._planner_id = "rrt_connect"
@@ -88,8 +92,9 @@ class MoveGroup:
         self._expected_exec_count = 0
         self._plan_routed = False  # True when planner→executor has the trajectory
 
-        # Dora node (single-threaded access only)
-        self._node = Node()
+        # Dora node (single-threaded access only). Accept an injected node so an
+        # external owner (e.g. a SPEC vendor node) can share one Node per process.
+        self._node = node if node is not None else Node()
         self._stopped = False
 
         # Wait for first joint state
@@ -113,11 +118,20 @@ class MoveGroup:
 
         if event is None:
             return None
-        if event["type"] == "STOP":
+        self.handle_event(event)
+        return event
+
+    def handle_event(self, event):
+        """Dispatch one already-pulled dora event to the right handler.
+
+        Public so an external owner of the shared node (e.g. a SPEC vendor node)
+        can feed MoveGroup the non-cmd_request events it pulls from node.next().
+        """
+        if event.get("type") == "STOP":
             self._stopped = True
-            return event
-        if event["type"] != "INPUT":
-            return event
+            return
+        if event.get("type") != "INPUT":
+            return
 
         event_id = event["id"]
         try:
@@ -138,8 +152,6 @@ class MoveGroup:
         except Exception as e:
             print(f"[MoveGroup] Error handling {event_id}: {e}")
 
-        return event
-
     def _poll_until(self, condition_fn, timeout, poll_interval=0.05):
         """Poll events until condition_fn() returns True or timeout expires.
         Returns True if condition was met, False on timeout."""
@@ -154,7 +166,7 @@ class MoveGroup:
 
     def _handle_joint_positions(self, event):
         joints = event["value"].to_numpy()
-        self._current_joints = _extract_arm_joints(joints, self._num_joints)
+        self._current_joints = _extract_arm_joints(joints, self._num_joints, self._arm_qpos_start)
 
     # Plan/trajectory/execution state for current operation
     _plan_done = False
@@ -163,6 +175,7 @@ class MoveGroup:
     _plan_trajectory = None
     _exec_done = False
     _exec_success = False
+    _pending_pose_plan = False  # async IK in flight; plan fires on ik_solution
     _ik_done = False
     _ik_success = False
     _ik_solution = None
@@ -218,6 +231,11 @@ class MoveGroup:
             self._ik_solution = solution[:self._num_joints].copy()
             self._ik_success = True
             self._ik_done = True
+            if self._pending_pose_plan:
+                self._pending_pose_plan = False
+                self._target_joints = np.asarray(self._ik_solution, dtype=float)
+                self._target_pose = None
+                self._send_plan_request()
 
     def _handle_ik_status(self, event):
         status = _decode_json(event["value"])
@@ -225,6 +243,11 @@ class MoveGroup:
             self._ik_success = False
             self._ik_message = status.get("message", "IK failed")
             self._ik_done = True
+            if self._pending_pose_plan:
+                self._pending_pose_plan = False
+                self._plan_success = False
+                self._plan_message = self._ik_message or "IK failed for pose target"
+                self._plan_done = True
 
     def _handle_command_result(self, event):
         try:
@@ -235,6 +258,68 @@ class MoveGroup:
         self._scene_done = True
 
     # ==================== Joint-space motion ==================== #
+
+    def _send_plan_request(self):
+        """Build and send a plan_request for the current _target_joints.
+
+        Shared by the blocking go() and the non-blocking begin_motion_async().
+        The caller is responsible for resetting the plan/exec flags first.
+        """
+        self._expected_exec_count += 1
+        request = {
+            "start": np.asarray(self._current_joints, dtype=float).tolist(),
+            "goal": np.asarray(self._target_joints, dtype=float).tolist(),
+            "planner": self._planner_id,
+            "max_time": self._planning_time,
+        }
+        self._node.send_output("plan_request", _encode_json(request))
+
+    def begin_motion_async(self, joint_goal=None):
+        """Non-blocking motion: fire the plan (and IK first for pose targets) and
+        return immediately — never re-enters node.next(). Completion is observed
+        via the _plan_*/_exec_* flags as events arrive through handle_event().
+
+        For a pose target the IK solve is deferred too: ik_request is sent now and
+        _handle_ik_solution fires the plan_request when the solution arrives; an IK
+        failure latches _plan_done/_plan_success=False so callers see "failed".
+
+        Single-in-flight is the caller's responsibility: calling this again before
+        the prior motion completes resets state and is not self-protected (the
+        runtime enforces single-in-flight one layer up).
+        """
+        if joint_goal is not None:
+            self.set_joint_value_target(joint_goal)
+        if self._current_joints is None:
+            raise RuntimeError("No joint state received yet.")
+
+        # Reset operation state (mirrors go()).
+        self._plan_done = False
+        self._plan_success = False
+        self._plan_trajectory = None
+        self._plan_message = ""
+        self._exec_done = False
+        self._exec_success = False
+
+        if self._target_joints is None and self._target_pose is not None:
+            # Async IK: the ik_solution callback will fire the plan_request.
+            self._ik_done = False
+            self._ik_success = False
+            self._ik_solution = None
+            self._ik_message = ""
+            self._pending_pose_plan = True
+            self._node.send_output(
+                "ik_request",
+                pa.array(np.asarray(self._target_pose, dtype=np.float32),
+                         type=pa.float32()),
+            )
+            return
+
+        if self._target_joints is None:
+            raise RuntimeError(
+                "No target set. Call set_joint_value_target() or "
+                "set_named_target() first."
+            )
+        self._send_plan_request()
 
     def go(self, joint_goal=None, wait=True, timeout=30.0):
         """Plan and execute motion to a joint-space goal.
@@ -270,19 +355,12 @@ class MoveGroup:
         self._plan_done = False
         self._plan_success = False
         self._plan_trajectory = None
+        self._plan_message = ""
         self._exec_done = False
         self._exec_success = False
-        # Increment exec count: planner will send trajectory to executor via dataflow
-        self._expected_exec_count += 1
-
-        # Send plan request
-        request = {
-            "start": np.asarray(self._current_joints, dtype=float).tolist(),
-            "goal": np.asarray(self._target_joints, dtype=float).tolist(),
-            "planner": self._planner_id,
-            "max_time": self._planning_time,
-        }
-        self._node.send_output("plan_request", _encode_json(request))
+        # Increment exec count + send plan request (planner forwards trajectory
+        # to the executor via the dataflow).
+        self._send_plan_request()
 
         if not wait:
             return True

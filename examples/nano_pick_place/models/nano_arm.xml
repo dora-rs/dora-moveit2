@@ -1,0 +1,131 @@
+<mujoco model="nano_arm">
+  <!--
+    ADORA1 Nano SO_ARM100 6-DOF Arm (standalone arm-only model)
+    Extracted from nano.urdf — arm kinematic chain only (no base/wheels).
+    Meshes in mm-scale STL, converted via scale="0.001".
+  -->
+
+  <compiler angle="radian" meshdir="nano_assets"/>
+
+  <option gravity="0 0 -9.81" timestep="0.002"/>
+
+  <default>
+    <joint damping="0.5" armature="0.01"/>
+    <geom contype="1" conaffinity="1" condim="3" friction="1 0.5 0.01"/>
+    <position kp="50" ctrlrange="-2.618 2.618"/>
+  </default>
+
+  <asset>
+    <!-- Arm link meshes -->
+    <mesh name="base_servo" file="STS3215_03a-v1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rotation_pitch" file="Rotation_Pitch_08i-v1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="shoulder_servo" file="STS3215_03a-v1-1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="upper_arm" file="SO_ARM100_08k_116_Square-v1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="elbow_servo" file="STS3215_03a-v1-2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="forearm" file="SO_ARM100_08k_Mirror-v1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="wrist_pitch_servo" file="STS3215_03a-v1-3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="wrist_bracket" file="Wrist_Roll_Pitch_08i-v1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="wrist_roll_servo" file="STS3215_03a_Wrist_Roll-v1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="wrist_roll_bracket" file="Wrist_Roll_08c-v1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="gripper_servo" file="STS3215_03a-v1-4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="gripper_jaw" file="Moving_Jaw_08d-v1.stl" scale="0.001 0.001 0.001"/>
+  </asset>
+
+  <worldbody>
+    <!-- Fixed mount point elevated above ground -->
+    <body name="mount" pos="0 0 0.1">
+      <geom type="cylinder" size="0.04 0.005" rgba="0.3 0.3 0.3 1" mass="1.0"/>
+
+      <!-- Base servo (joint 1 parent) -->
+      <body name="base_servo" pos="0 0 0.005">
+        <geom type="mesh" mesh="base_servo" rgba="0.2 0.2 0.2 1" mass="0.066"/>
+
+        <!-- Joint 1: Base rotation (Z axis) -->
+        <body name="shoulder" pos="-0.01025 0.0346 -0.0328" euler="1.5708 0 0">
+          <joint name="joint1" type="hinge" axis="0 0 1" range="-2.618 2.618"/>
+          <geom type="mesh" mesh="rotation_pitch" rgba="0.8 0.8 0.8 1" mass="0.05"/>
+
+          <!-- Fixed joint to shoulder servo -->
+          <body name="shoulder_servo" pos="-0.0163 -0.04085 -0.0194">
+            <geom type="mesh" mesh="shoulder_servo" rgba="0.2 0.2 0.2 1" mass="0.066"/>
+
+            <!-- Joint 2: Shoulder (X axis) -->
+            <body name="upper_arm" pos="0.0346 0.01025 -0.0328" euler="3.1416 0 0">
+              <joint name="joint2" type="hinge" axis="1 0 0" range="-2.618 2.618"/>
+              <geom type="mesh" mesh="upper_arm" rgba="0.8 0.8 0.8 1" mass="0.04"/>
+
+              <!-- Fixed joint to elbow servo -->
+              <body name="elbow_servo" pos="-0.0361 -0.10151 -0.01370">
+                <geom type="mesh" mesh="elbow_servo" rgba="0.2 0.2 0.2 1" mass="0.066"/>
+
+                <!-- Joint 3: Elbow (X axis) -->
+                <body name="forearm" pos="0.0346 -0.01307 0.03178">
+                  <joint name="joint3" type="hinge" axis="1 0 0" range="-2.618 2.618"/>
+                  <geom type="mesh" mesh="forearm" rgba="0.8 0.8 0.8 1" mass="0.04"/>
+
+                  <!-- Fixed joint to wrist pitch servo -->
+                  <body name="wrist_pitch_servo" pos="-0.0361 0.09885 0.03312" euler="3.1416 0 0">
+                    <geom type="mesh" mesh="wrist_pitch_servo" rgba="0.2 0.2 0.2 1" mass="0.066"/>
+
+                    <!-- Joint 4: Wrist pitch (X axis) -->
+                    <body name="wrist_bracket" pos="0.0346 -0.03408 0.00440" euler="3.1416 0 0">
+                      <joint name="joint4" type="hinge" axis="1 0 0" range="-2.618 2.618"/>
+                      <geom type="mesh" mesh="wrist_bracket" rgba="0.8 0.8 0.8 1" mass="0.03"/>
+
+                      <!-- Fixed joint to wrist roll servo -->
+                      <body name="wrist_roll_servo" pos="0.0089 0.03393 -0.04851" euler="3.1416 0 0">
+                        <geom type="mesh" mesh="wrist_roll_servo" rgba="0.2 0.2 0.2 1" mass="0.066"/>
+
+                        <!-- Joint 5: Wrist roll (angled axis) -->
+                        <body name="wrist_roll" pos="-0.029 0.00811 0.00687" euler="3.1416 0 0">
+                          <joint name="joint5" type="hinge" axis="0 0.4226 -0.9063" range="-2.618 2.618"/>
+                          <geom type="mesh" mesh="wrist_roll_bracket" rgba="0.8 0.8 0.8 1" mass="0.02"/>
+
+                          <!-- Fixed joint to gripper servo -->
+                          <body name="gripper_servo" pos="0.013 0.01994 -0.00491" euler="1.5708 0 0">
+                            <geom type="mesh" mesh="gripper_servo" rgba="0.2 0.2 0.2 1" mass="0.066"/>
+
+                            <!-- Joint 6: Gripper (angled axis) -->
+                            <body name="gripper_jaw" pos="-0.0328 -0.02391 0.02703" euler="-1.5708 0 0">
+                              <joint name="joint6" type="hinge" axis="0 -0.9063 -0.4226" range="-1.57 1.57"/>
+                              <geom type="mesh" mesh="gripper_jaw" rgba="0.9 0.4 0.1 1" mass="0.02"/>
+
+                              <!-- End-effector site (fingertip) -->
+                              <site name="ee_site" pos="0 0 -0.03" size="0.005" rgba="0 1 0 1"/>
+                            </body>
+                          </body>
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+
+    <!-- Ground plane -->
+    <geom name="ground" type="plane" size="0.5 0.5 0.01" rgba="0.9 0.9 0.9 1" pos="0 0 0"/>
+
+    <!-- Pick-and-place target object -->
+    <body name="target_object" pos="0.12 0.0 0.02">
+      <freejoint/>
+      <geom type="sphere" size="0.015" rgba="1 0 0 1" mass="0.01"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <position name="act_joint1" joint="joint1" kp="50" ctrlrange="-2.618 2.618"/>
+    <position name="act_joint2" joint="joint2" kp="50" ctrlrange="-2.618 2.618"/>
+    <position name="act_joint3" joint="joint3" kp="50" ctrlrange="-2.618 2.618"/>
+    <position name="act_joint4" joint="joint4" kp="50" ctrlrange="-2.618 2.618"/>
+    <position name="act_joint5" joint="joint5" kp="50" ctrlrange="-2.618 2.618"/>
+    <position name="act_joint6" joint="joint6" kp="30" ctrlrange="-1.57 1.57"/>
+  </actuator>
+
+  <keyframe>
+    <key name="home" qpos="0 0 0 0 0 0  0.12 0 0.02 1 0 0 0" ctrl="0 0 0 0 0 0"/>
+  </keyframe>
+</mujoco>

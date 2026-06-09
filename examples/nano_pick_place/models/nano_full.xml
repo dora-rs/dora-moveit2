@@ -1,0 +1,129 @@
+<mujoco model="nano_full">
+  <compiler angle="radian" meshdir="nano_assets" />
+
+  <asset>
+    <mesh name="base_plate_layer1-v5" content_type="model/stl" file="base_plate_layer1-v5.stl" scale="0.001 0.001 0.001" />
+    <mesh name="drive_motor_mount-v11-2" content_type="model/stl" file="drive_motor_mount-v11-2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="ST3215_Servo_Motor-v1-2" content_type="model/stl" file="ST3215_Servo_Motor-v1-2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="4-Omni-Directional-Wheel_Single_Body-v1-2" content_type="model/stl" file="4-Omni-Directional-Wheel_Single_Body-v1-2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="omni_wheel_mount-v5-2" content_type="model/stl" file="omni_wheel_mount-v5-2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="drive_motor_mount-v11-1" content_type="model/stl" file="drive_motor_mount-v11-1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="ST3215_Servo_Motor-v1-1" content_type="model/stl" file="ST3215_Servo_Motor-v1-1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="omni_wheel_mount-v5-1" content_type="model/stl" file="omni_wheel_mount-v5-1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="4-Omni-Directional-Wheel_Single_Body-v1-1" content_type="model/stl" file="4-Omni-Directional-Wheel_Single_Body-v1-1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="drive_motor_mount-v11" content_type="model/stl" file="drive_motor_mount-v11.stl" scale="0.001 0.001 0.001" />
+    <mesh name="ST3215_Servo_Motor-v1" content_type="model/stl" file="ST3215_Servo_Motor-v1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="omni_wheel_mount-v5" content_type="model/stl" file="omni_wheel_mount-v5.stl" scale="0.001 0.001 0.001" />
+    <mesh name="4-Omni-Directional-Wheel_Single_Body-v1" content_type="model/stl" file="4-Omni-Directional-Wheel_Single_Body-v1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="servo_controller_mount-v3" content_type="model/stl" file="servo_controller_mount-v3.stl" scale="0.001 0.001 0.001" />
+    <mesh name="lipo_battery_mount-v3" content_type="model/stl" file="lipo_battery_mount-v3.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Battery---Battery-5.2-Ah-DC5521-Plug-v2" content_type="model/stl" file="Battery---Battery-5.2-Ah-DC5521-Plug-v2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff" content_type="model/stl" file="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff.stl" scale="0.001 0.001 0.001" />
+    <mesh name="base_plate_layer2-v3" content_type="model/stl" file="base_plate_layer2-v3.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Bottom-V2-v3" content_type="model/stl" file="Bottom-V2-v3.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Top-V2-v2" content_type="model/stl" file="Top-V2-v2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-5" content_type="model/stl" file="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-5.stl" scale="0.001 0.001 0.001" />
+    <mesh name="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-4" content_type="model/stl" file="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-4.stl" scale="0.001 0.001 0.001" />
+    <mesh name="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-3" content_type="model/stl" file="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-3.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Base_08q-v1" content_type="model/stl" file="Base_08q-v1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="WaveShare_Mounting_Plate_01d-v1" content_type="model/stl" file="WaveShare_Mounting_Plate_01d-v1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="STS3215_03a-v1" content_type="model/stl" file="STS3215_03a-v1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Rotation_Pitch_08i-v1" content_type="model/stl" file="Rotation_Pitch_08i-v1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="SO_ARM100_08k_Asym_Mirror_Clip-v1" content_type="model/stl" file="SO_ARM100_08k_Asym_Mirror_Clip-v1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Passive_Horn_01-v1" content_type="model/stl" file="Passive_Horn_01-v1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="STS3215_03a-v1-1" content_type="model/stl" file="STS3215_03a-v1-1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="SO_ARM100_08k_116_Square-v1" content_type="model/stl" file="SO_ARM100_08k_116_Square-v1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="STS3215_03a-v1-2" content_type="model/stl" file="STS3215_03a-v1-2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="SO_ARM100_08k_Mirror-v1" content_type="model/stl" file="SO_ARM100_08k_Mirror-v1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="STS3215_03a-v1-3" content_type="model/stl" file="STS3215_03a-v1-3.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Wrist_Roll_Pitch_08i-v1" content_type="model/stl" file="Wrist_Roll_Pitch_08i-v1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="STS3215_03a_Wrist_Roll-v1" content_type="model/stl" file="STS3215_03a_Wrist_Roll-v1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Wrist_Roll_08c-v1" content_type="model/stl" file="Wrist_Roll_08c-v1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="STS3215_03a-v1-4" content_type="model/stl" file="STS3215_03a-v1-4.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Moving_Jaw_08d-v1" content_type="model/stl" file="Moving_Jaw_08d-v1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Wrist-Camera-Mount-v11" content_type="model/stl" file="Wrist-Camera-Mount-v11.stl" scale="0.001 0.001 0.001" />
+    <mesh name="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-2" content_type="model/stl" file="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-1" content_type="model/stl" file="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-1.stl" scale="0.001 0.001 0.001" />
+  </asset>
+
+  <worldbody>
+    <body name="robot_base" pos="0 0 0.035"><geom name="base_plate_layer1-v5_collision" type="mesh" mesh="base_plate_layer1-v5" />
+    <geom name="drive_motor_mount-v11-2_collision" pos="-0.02 -0.1 0.0035" quat="-0.707107 0 0 0.707107" type="mesh" mesh="drive_motor_mount-v11-2" />
+    <geom name="ST3215_Servo_Motor-v1-2_collision" pos="-0.02489 -0.1096 0.01786" quat="0 0 0 1" type="mesh" mesh="ST3215_Servo_Motor-v1-2" />
+    <geom name="drive_motor_mount-v11-1_collision" pos="0.079282 0.0226795 0.0035" quat="0.965926 0 0 0.258819" type="mesh" mesh="drive_motor_mount-v11-1" />
+    <geom name="ST3215_Servo_Motor-v1-1_collision" pos="0.0907337 0.0236446 0.01786" quat="0.866025 0 0 -0.5" type="mesh" mesh="ST3215_Servo_Motor-v1-1" />
+    <geom name="drive_motor_mount-v11_collision" pos="-0.059282 0.0573205 0.0035" quat="0.258819 0 0 0.965926" type="mesh" mesh="drive_motor_mount-v11" />
+    <geom name="ST3215_Servo_Motor-v1_collision" pos="-0.0651509 0.0663554 0.01786" quat="-0.866025 0 0 -0.5" type="mesh" mesh="ST3215_Servo_Motor-v1" />
+    <geom name="servo_controller_mount-v3_collision" pos="0 0.06 0.006" quat="0.707107 0 0 0.707107" type="mesh" mesh="servo_controller_mount-v3" />
+    <geom name="lipo_battery_mount-v3_collision" pos="-0.05 -0.02 0.0035" quat="-0.707107 0 0 -0.707107" type="mesh" mesh="lipo_battery_mount-v3" />
+    <geom name="Battery---Battery-5.2-Ah-DC5521-Plug-v2_collision" pos="-0.0865 -0.02 0.0065" quat="-0.707107 0 0.707107 0" type="mesh" mesh="Battery---Battery-5.2-Ah-DC5521-Plug-v2" />
+    <geom name="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff_collision" pos="0 0 0.025" quat="-1 0 0 0" type="mesh" mesh="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff" />
+    <geom name="base_plate_layer2-v3_collision" pos="0 0 0.057" quat="-1 0 0 0" type="mesh" mesh="base_plate_layer2-v3" />
+    <geom name="Bottom-V2-v3_collision" pos="-2.98023e-11 -0.064 0.057" quat="0 0 0 1" type="mesh" mesh="Bottom-V2-v3" />
+    <geom name="Top-V2-v2_collision" pos="2.26025e-07 -0.064 0.0859996" quat="0 0 -1 0" type="mesh" mesh="Top-V2-v2" />
+    <geom name="Base_08q-v1_collision" pos="2.6919e-09 0.021948 0.0546" quat="0 0 0.707107 0.707107" type="mesh" mesh="Base_08q-v1" />
+    <geom name="WaveShare_Mounting_Plate_01d-v1_collision" pos="5.00027e-05 -0.00285199 0.1173" quat="0.707107 -0.707107 0 0" type="mesh" mesh="WaveShare_Mounting_Plate_01d-v1" />
+    <geom name="STS3215_03a-v1_collision" pos="2.6919e-09 0.054648 0.1007" quat="-0.707107 0 0 -0.707107" type="mesh" mesh="STS3215_03a-v1" />
+    <geom name="Passive_Horn_01-v1_collision" pos="2.6919e-09 0.067148 0.0706" quat="-1 0 0 0" type="mesh" mesh="Passive_Horn_01-v1" />
+    <geom name="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-5_collision" pos="0.02 -0.1 0.025" quat="-1 0 0 0" type="mesh" mesh="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-5" />
+    <geom name="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-4_collision" pos="0.0766025 0.0673205 0.025" quat="-1 0 0 0" type="mesh" mesh="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-4" />
+    <geom name="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-3_collision" pos="-0.0966025 0.0326795 0.025" quat="-1 0 0 0" type="mesh" mesh="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-3" />
+    <geom name="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-2_collision" pos="0.1 -0.02 0.024816" quat="-1 0 0 0" type="mesh" mesh="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-2" />
+    <geom name="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-1_collision" pos="-0.1 -0.02 0.025" quat="-1 0 0 0" type="mesh" mesh="94868A713_NO-THREADS_Female-Threaded-Hex-Standoff-1" />
+    <body name="omni_wheel_mount-v5-2" pos="0.00061 -0.1192 0.01786" quat="-0.707107 0.707107 0 0">
+      <inertial pos="-0.00417268 0.0145476 -0.00554331" quat="0.502746 0.502624 0.497214 0.497387" mass="1.47786" diaginertia="0.00190011 0.00115714 0.00113993" />
+      <joint name="ST3215_Servo_Motor-v1-2_Revolute-60" pos="0 0 0" axis="0 0 -1" />
+      <geom name="omni_wheel_mount-v5-2_collision" pos="0 0 -0.0055875" quat="0 1 0 0" type="mesh" mesh="omni_wheel_mount-v5-2" />
+      <geom name="4-Omni-Directional-Wheel_Single_Body-v1-2_collision" pos="0 0 -0.02305" quat="0.991445 0 0 -0.130526" type="mesh" mesh="4-Omni-Directional-Wheel_Single_Body-v1-2" />
+    </body>
+    <body name="omni_wheel_mount-v5-1" pos="0.0862975 0.0505283 0.01786" quat="0.707107 -0.707107 0 0">
+      <inertial pos="0.0164327 -0.012714 -0.00112679" quat="0.709903 0.658969 -0.176075 -0.175484" mass="1.47786" diaginertia="0.00191227 0.00115501 0.0011524" />
+      <joint name="ST3215_Servo_Motor-v1-1_Revolute-62" pos="0 0 0" axis="0.866025 0 0.5" />
+      <geom name="omni_wheel_mount-v5-1_collision" pos="0.00483892 0 0.00279375" quat="0.612372 0.353553 0.353553 0.612372" type="mesh" mesh="omni_wheel_mount-v5-1" />
+      <geom name="4-Omni-Directional-Wheel_Single_Body-v1-1_collision" pos="0.0199619 0 0.011525" quat="0.353553 -0.612372 -0.612372 0.353553" type="mesh" mesh="4-Omni-Directional-Wheel_Single_Body-v1-1" />
+    </body>
+    <body name="omni_wheel_mount-v5" pos="-0.0862147 0.0490717 0.01786" quat="-0.707107 0.707107 0 0">
+      <inertial pos="-0.0166595 -0.0123212 0.0023171" quat="0.824408 0.508238 0.134529 0.209636" mass="1.47786" diaginertia="0.0019094 0.00115599 0.00114905" />
+      <joint name="ST3215_Servo_Motor-v1_Revolute-64" pos="0 0 0" axis="-0.866025 0 0.5" />
+      <geom name="omni_wheel_mount-v5_collision" pos="-0.00483892 0 0.00279375" quat="0.612372 -0.353553 -0.353553 0.612372" type="mesh" mesh="omni_wheel_mount-v5" />
+      <geom name="4-Omni-Directional-Wheel_Single_Body-v1_collision" pos="-0.0199619 0 0.011525" quat="0.396677 0.527203 0.687064 0.304381" type="mesh" mesh="4-Omni-Directional-Wheel_Single_Body-v1" />
+    </body>
+    <body name="Rotation_Pitch_08i-v1" pos="0 0.067148 0.1194" quat="0 -1 0 0">
+      <inertial pos="0.0121932 -0.014263 -0.00319699" quat="0.118964 0.89703 0.0522417 0.422441" mass="0.931381" diaginertia="0.00252567 0.00203669 0.00100192" />
+      <joint name="STS3215_03a-v1_Revolute-45" pos="0 0 0" axis="0 0 1" range="-2.618 2.618" actuatorfrcrange="-3 3" />
+      <geom name="Rotation_Pitch_08i-v1_collision" pos="2.6919e-09 0.012 0.0484" quat="0.5 -0.5 -0.5 0.5" type="mesh" mesh="Rotation_Pitch_08i-v1" />
+      <geom name="SO_ARM100_08k_Asym_Mirror_Clip-v1_collision" pos="-0.000199997 -0.0678 -0.0604499" quat="0 -0.707107 0 0.707107" type="mesh" mesh="SO_ARM100_08k_Asym_Mirror_Clip-v1" />
+      <geom name="STS3215_03a-v1-1_collision" pos="-0.000399997 -0.0306 -0.0397" quat="0.707107 0 0.707107 0" type="mesh" mesh="STS3215_03a-v1-1" />
+      <body name="SO_ARM100_08k_116_Square-v1" pos="0.0183 -0.0306 -0.0522" quat="0 1 0 0">
+        <inertial pos="0.0108189 -0.05525 -0.00428725" quat="-0.0714017 0.694127 -0.000339841 0.716302" mass="1.27493" diaginertia="0.00584546 0.0047271 0.00130734" />
+        <joint name="STS3215_03a-v1-1_Revolute-49" pos="0 0 0" axis="1 0 0" range="-2.618 2.618" actuatorfrcrange="-3 3" />
+        <geom name="SO_ARM100_08k_116_Square-v1_collision" pos="-0.0197 -0.0637915 -0.0176269" quat="0.477714 0.521334 0.477714 0.521334" type="mesh" mesh="SO_ARM100_08k_116_Square-v1" />
+        <geom name="STS3215_03a-v1-2_collision" pos="-0.0202 -0.113493 0.0056299" quat="0.0308436 -0.706434 0.0308436 -0.706434" type="mesh" mesh="STS3215_03a-v1-2" />
+        <body name="SO_ARM100_08k_Mirror-v1" pos="-0.0015 -0.114582 0.0180823">
+          <inertial pos="-0.0315483 0.0338744 -0.00034492" quat="0.489596 0.415854 -0.696491 0.319785" mass="1.16155" diaginertia="0.00538254 0.00489574 0.000653389" />
+          <joint name="STS3215_03a-v1-2_Revolute-51" pos="0 0 0" axis="1 0 0" range="-2.618 2.618" actuatorfrcrange="-3 3" />
+          <geom name="SO_ARM100_08k_Mirror-v1_collision" pos="-0.0197 0.0694214 -0.0202528" quat="0.541675 -0.454519 0.541675 -0.454519" type="mesh" mesh="SO_ARM100_08k_Mirror-v1" />
+          <geom name="STS3215_03a-v1-3_collision" pos="-0.0202 0.120622 0.0265492" quat="-0.454519 -0.541675 -0.454519 -0.541675" type="mesh" mesh="STS3215_03a-v1-3" />
+          <body name="Wrist_Roll_Pitch_08i-v1" pos="-0.0015 0.132932 0.0287198">
+            <inertial pos="-0.0412282 0.00954662 0.00390401" quat="0.725364 -0.199338 -0.31336 0.579584" mass="0.519131" diaginertia="0.000873266 0.000787085 0.000169913" />
+            <joint name="STS3215_03a-v1-3_Revolute-53" pos="0 0 0" axis="1 0 0" range="-2.618 2.618" actuatorfrcrange="-3 3" />
+            <geom name="Wrist_Roll_Pitch_08i-v1_collision" pos="-0.0201 0.0118333 -0.0253766" quat="0.976296 0.21644 0 0" type="mesh" mesh="Wrist_Roll_Pitch_08i-v1" />
+            <geom name="STS3215_03a_Wrist_Roll-v1_collision" pos="-0.0076 0.017919 -0.0384275" quat="0 0 -0.976296 -0.21644" type="mesh" mesh="STS3215_03a_Wrist_Roll-v1" />
+            <body name="Wrist_Roll_08c-v1" pos="-0.0201 0.025822 -0.0553754">
+              <inertial pos="-0.0073571 0.00399644 0.00261378" quat="0.833666 -0.0305155 -0.314009 0.453286" mass="0.87383" diaginertia="0.00180058 0.0016961 0.000348471" />
+              <joint name="STS3215_03a_Wrist_Roll-v1_Revolute-55" pos="0 0 0" axis="0 0.422618 -0.906308" range="-2.618 2.618" actuatorfrcrange="-3 3" />
+              <geom name="Wrist_Roll_08c-v1_collision" pos="2.6919e-09 -6.35704e-10 1.17334e-09" quat="0 0 0.976296 0.21644" type="mesh" mesh="Wrist_Roll_08c-v1" />
+              <geom name="STS3215_03a-v1-4_collision" pos="-0.0073 0.00986368 -0.0209161" quat="0 0 0.843391 -0.5373" type="mesh" mesh="STS3215_03a-v1-4" />
+              <geom name="Wrist-Camera-Mount-v11_collision" pos="0.000550003 0.0271926 -0.00152587" quat="0.596368 -0.379928 0.379928 0.596368" type="mesh" mesh="Wrist-Camera-Mount-v11" />
+              <body name="Moving_Jaw_08d-v1" pos="-0.0198 -0.00708428 -0.0288191">
+                <inertial pos="0.00161982 0.0316831 -0.0187646" quat="0.979113 0.200613 -0.0320265 -0.0081815" mass="0.158681" diaginertia="8.70094e-05 7.04236e-05 2.33779e-05" />
+                <joint name="STS3215_03a-v1-4_Revolute-57" pos="0 0 0" axis="0 -0.906308 -0.422618" range="-1.57 1.57" actuatorfrcrange="-3 3" />
+                <geom name="Moving_Jaw_08d-v1_collision" pos="2.6919e-09 0.0184887 0.00862142" quat="0 0 0.5373 0.843391" type="mesh" mesh="Moving_Jaw_08d-v1" />
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </body><geom name="ground" type="plane" size="1 1 0.01" rgba="0.9 0.9 0.9 1" pos="0 0 0" /><body name="target_object" pos="-0.04 0.25 0.06"><freejoint /><geom type="sphere" size="0.024" rgba="1 0 0 1" mass="0.005" /></body><geom name="place_plate" type="cylinder" size="0.04 0.003" pos="0.10 0.25 0.04" rgba="0.2 0.8 0.2 1" mass="0.1" contype="1" conaffinity="1" /><light pos="0 0 1.5" dir="0 0 -1" diffuse="0.8 0.8 0.8" /></worldbody>
+<actuator><position name="act_joint1" joint="STS3215_03a-v1_Revolute-45" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint2" joint="STS3215_03a-v1-1_Revolute-49" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint3" joint="STS3215_03a-v1-2_Revolute-51" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint4" joint="STS3215_03a-v1-3_Revolute-53" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint5" joint="STS3215_03a_Wrist_Roll-v1_Revolute-55" kp="50" ctrlrange="-2.618 2.618" /><position name="act_joint6" joint="STS3215_03a-v1-4_Revolute-57" kp="30" ctrlrange="-1.57 1.57" /></actuator></mujoco>

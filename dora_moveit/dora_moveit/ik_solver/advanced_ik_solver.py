@@ -66,13 +66,22 @@ class ForwardKinematics:
         return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
 
     def _rot_axis(self, angle, axis):
-        """Rotate about the given axis [x, y, z]."""
-        if axis[2] != 0:
-            return self._rot_z(angle)
-        elif axis[1] != 0:
-            return self._rot_y(angle)
-        else:
-            return self._rot_x(angle)
+        """Rotate about an arbitrary unit axis using Rodrigues' formula."""
+        ax = np.array(axis, dtype=float)
+        norm = np.linalg.norm(ax)
+        if norm < 1e-10:
+            return np.eye(3)
+        ax = ax / norm
+        # Fast path for pure cardinal axes
+        if abs(ax[0]) < 1e-6 and abs(ax[1]) < 1e-6:
+            return self._rot_z(angle * np.sign(ax[2]))
+        if abs(ax[0]) < 1e-6 and abs(ax[2]) < 1e-6:
+            return self._rot_y(angle * np.sign(ax[1]))
+        if abs(ax[1]) < 1e-6 and abs(ax[2]) < 1e-6:
+            return self._rot_x(angle * np.sign(ax[0]))
+        # General Rodrigues' rotation formula
+        K = np.array([[0, -ax[2], ax[1]], [ax[2], 0, -ax[0]], [-ax[1], ax[0], 0]])
+        return np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
 
     def compute_fk(self, joint_positions: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """

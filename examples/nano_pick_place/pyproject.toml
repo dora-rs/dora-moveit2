@@ -1,0 +1,14 @@
+[project]
+name = "nano-pick-place"
+version = "0.1.0"
+description = "ADORA1 Nano pick-and-place demo — dora-moveit MoveGroup API example"
+requires-python = ">=3.9"
+dependencies = ["dora-moveit"]
+
+[build-system]
+requires = ["setuptools >= 64.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nano_pick_place*"]

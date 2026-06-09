@@ -58,6 +58,67 @@ class RobotConfig(Protocol):
     def clip_to_limits(q: np.ndarray) -> np.ndarray: ...
 
 
+@runtime_checkable
+class DualArmConfig(RobotConfig, Protocol):
+    """Extended protocol for dual-arm robot configurations.
+
+    Adds per-chain fields on top of the single-arm RobotConfig.
+    Single-arm fields (LINK_TRANSFORMS, HOME_CONFIG, etc.) should default
+    to the primary arm for backward compatibility.
+    """
+
+    ARM_CHAINS: List[str]
+    ARM_BASE_TRANSFORMS: Dict[str, Dict]
+    LINK_TRANSFORMS_PER_CHAIN: Dict[str, List[Dict]]
+    COLLISION_GEOMETRY_PER_CHAIN: Dict[str, List[tuple]]
+    HOME_CONFIG_PER_CHAIN: Dict[str, np.ndarray]
+    NAMED_POSES_PER_CHAIN: Dict[str, Dict[str, np.ndarray]]
+
+
+def is_dual_arm(config) -> bool:
+    """Check if a robot config supports dual-arm operation."""
+    return hasattr(config, 'ARM_CHAINS') and len(getattr(config, 'ARM_CHAINS', [])) > 1
+
+
+def get_arm_config(config, arm_name: str) -> dict:
+    """Extract single-arm view from a dual-arm config.
+
+    Returns a dict with keys: link_transforms, collision_geometry,
+    home_config, named_poses, base_transform, joint_lower_limits,
+    joint_upper_limits.
+    """
+    if not is_dual_arm(config):
+        return {
+            "link_transforms": config.LINK_TRANSFORMS,
+            "collision_geometry": config.COLLISION_GEOMETRY,
+            "home_config": config.HOME_CONFIG,
+            "named_poses": config.NAMED_POSES,
+            "base_transform": {"xyz": [0, 0, 0], "rpy": [0, 0, 0]},
+            "joint_lower_limits": config.JOINT_LOWER_LIMITS,
+            "joint_upper_limits": config.JOINT_UPPER_LIMITS,
+        }
+
+    return {
+        "link_transforms": config.LINK_TRANSFORMS_PER_CHAIN.get(
+            arm_name, config.LINK_TRANSFORMS
+        ),
+        "collision_geometry": config.COLLISION_GEOMETRY_PER_CHAIN.get(
+            arm_name, config.COLLISION_GEOMETRY
+        ),
+        "home_config": config.HOME_CONFIG_PER_CHAIN.get(
+            arm_name, config.HOME_CONFIG
+        ),
+        "named_poses": config.NAMED_POSES_PER_CHAIN.get(
+            arm_name, config.NAMED_POSES
+        ),
+        "base_transform": config.ARM_BASE_TRANSFORMS.get(
+            arm_name, {"xyz": [0, 0, 0], "rpy": [0, 0, 0]}
+        ),
+        "joint_lower_limits": config.JOINT_LOWER_LIMITS,
+        "joint_upper_limits": config.JOINT_UPPER_LIMITS,
+    }
+
+
 # Per-process cache
 _cached_config = None
 

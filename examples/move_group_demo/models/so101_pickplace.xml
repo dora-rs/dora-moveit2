@@ -1,0 +1,173 @@
+<mujoco model="so101_pickplace">
+  <!-- SO-101 (LeRobot / TheRobotStudio SO-ARM101) pick-and-place scene for the octos
+       skill demo. Robot bodies/actuators from SO-ARM100/Simulation/SO101/so101_new_calib.xml
+       (5 arm hinges + 1 gripper jaw hinge), scene styling from its scene.xml.
+
+       qpos layout matches ur5e/rebot (free object FIRST) so the skill slices transfer:
+         red_cube freejoint = qpos[0:7]
+         arm shoulder_pan..wrist_roll = qpos[7:12]   (5-DOF)
+         gripper jaw = qpos[12]
+       => SO101Config.ARM_QPOS_START=7, NUM_JOINTS=5, arm qvel[6:11], arm jnt[1:6].
+       Gripper actuator index = 5 (5 arm actuators 0..4, then gripper). -->
+  <compiler angle="radian" meshdir="so101_assets" autolimits="true"/>
+  <option timestep="0.002" iterations="50" solver="Newton"/>
+
+  <default>
+    <default class="so101">
+      <joint damping="1" frictionloss="0.1" armature="0.005"/>
+      <default class="visual">
+        <geom type="mesh" contype="0" conaffinity="0" group="2"/>
+      </default>
+      <default class="collision">
+        <geom group="3"/>
+      </default>
+    </default>
+    <default class="sts3215">
+      <geom contype="0" conaffinity="0"/>
+      <joint damping="0.60" frictionloss="0.052" armature="0.028"/>
+      <position kp="998.22" kv="2.731" forcerange="-2.94 2.94"/>
+    </default>
+  </default>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+    <mesh file="waveshare_mounting_plate_so101_v2.stl"/>
+    <mesh file="sts3215_03a_v1.stl"/>
+    <mesh file="motor_holder_so101_base_v1.stl"/>
+    <mesh file="wrist_roll_follower_so101_v1.stl"/>
+    <mesh file="moving_jaw_so101_v1.stl"/>
+    <mesh file="base_motor_holder_so101_v1.stl"/>
+    <mesh file="upper_arm_so101_v1.stl"/>
+    <mesh file="wrist_roll_pitch_so101_v2.stl"/>
+    <mesh file="under_arm_so101_v1.stl"/>
+    <mesh file="rotation_pitch_so101_v1.stl"/>
+    <mesh file="motor_holder_so101_wrist_v1.stl"/>
+    <mesh file="sts3215_03a_no_horn_v1.stl"/>
+    <mesh file="base_so101_v2.stl"/>
+    <material name="base_motor_holder_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="base_so101_v2_material" rgba="1 0.82 0.12 1"/>
+    <material name="sts3215_03a_v1_material" rgba="0.1 0.1 0.1 1"/>
+    <material name="waveshare_mounting_plate_so101_v2_material" rgba="1 0.82 0.12 1"/>
+    <material name="motor_holder_so101_base_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="rotation_pitch_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="upper_arm_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="under_arm_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="motor_holder_so101_wrist_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="sts3215_03a_no_horn_v1_material" rgba="0.1 0.1 0.1 1.0"/>
+    <material name="wrist_roll_pitch_so101_v2_material" rgba="1 0.82 0.12 1"/>
+    <material name="wrist_roll_follower_so101_v1_material" rgba="1 0.82 0.12 1"/>
+    <material name="moving_jaw_so101_v1_material" rgba="1 0.82 0.12 1"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 3.5" dir="0 0 -1" directional="true"/>
+    <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="groundplane"/>
+
+    <!-- ===== Free object FIRST so its freejoint owns qpos[0:7] ===== -->
+    <!-- Small red cube (half 0.012 = 24mm) within the small SO-101 reach. Starts at
+         x=0.22 — clearly OUTSIDE the green plate (plate center 0.12, radius 0.03 -> edge
+         0.15) so the demo visibly picks it from one spot and places it onto the plate. -->
+    <body name="red_cube" pos="0.22 0.0 0.02">
+      <freejoint name="cube_joint"/>
+      <inertial pos="0 0 0" mass="0.02" diaginertia="0.0008 0.0008 0.0008"/>
+      <geom condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001"
+            pos="0 0 0" size="0.012 0.012 0.012" type="box" name="red_cube" rgba="1 0 0 1"/>
+    </body>
+
+    <!-- Green place target marker. Radial in front of the base; tune on epyc. -->
+    <site name="place_target" pos="0.12 0.0 0.001" size="0.03 0.001" type="cylinder" rgba="0.1 0.8 0.1 0.5"/>
+
+    <!-- ===== SO-101 arm (from so101_new_calib.xml) ===== -->
+    <body name="base" pos="0 0 0" quat="1 0 0 0" childclass="so101">
+      <inertial pos="0.0137179 -5.19711e-05 0.0334843" mass="0.147" fullinertia="0.000114686 0.000136117 0.000130364 -4.59787e-07 4.97151e-06 9.75275e-08"/>
+      <geom type="mesh" class="visual" pos="-0.00636471 -9.94414e-05 -0.0024" quat="0.5 0.5 0.5 0.5" mesh="base_motor_holder_so101_v1" material="base_motor_holder_so101_v1_material"/>
+      <geom type="mesh" class="visual" pos="-0.00636471 -8.97657e-09 -0.0024" quat="0.5 0.5 0.5 0.5" mesh="base_so101_v2" material="base_so101_v2_material"/>
+      <geom type="mesh" class="visual" pos="0.0263353 -8.97657e-09 0.0437" quat="1 0 0 0" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
+      <geom type="mesh" class="visual" pos="-0.0309827 -0.000199441 0.0474" quat="0.5 0.5 0.5 0.5" mesh="waveshare_mounting_plate_so101_v2" material="waveshare_mounting_plate_so101_v2_material"/>
+      <body name="shoulder" pos="0.0388353 -8.97657e-09 0.0624" quat="0 0 -1 0">
+        <joint axis="0 0 1" name="shoulder_pan" type="hinge" range="-1.91986 1.91986" class="sts3215"/>
+        <inertial pos="-0.0307604 -1.66727e-05 -0.0252713" mass="0.100006" fullinertia="8.3759e-05 8.10403e-05 2.39783e-05 7.55525e-08 -1.16342e-06 1.54663e-07"/>
+        <geom type="mesh" class="visual" pos="-0.0303992 0.000422241 -0.0417" quat="0.5 0.5 0.5 -0.5" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
+        <geom type="mesh" class="visual" pos="-0.0675992 -0.000177759 0.0158499" quat="0.5 0.5 -0.5 0.5" mesh="motor_holder_so101_base_v1" material="motor_holder_so101_base_v1_material"/>
+        <geom type="mesh" class="visual" pos="0.0122008 2.22413e-05 0.0464" quat="0.707107 -0.707107 0 0" mesh="rotation_pitch_so101_v1" material="rotation_pitch_so101_v1_material"/>
+        <body name="upper_arm" pos="-0.0303992 -0.0182778 -0.0542" quat="0.5 -0.5 -0.5 -0.5">
+          <joint axis="0 0 1" name="shoulder_lift" type="hinge" range="-1.74533 1.74533" class="sts3215"/>
+          <inertial pos="-0.0898471 -0.00838224 0.0184089" mass="0.103" fullinertia="4.08002e-05 0.000147318 0.000142487 -1.97819e-05 -4.03016e-08 8.97326e-09"/>
+          <geom type="mesh" class="visual" pos="-0.11257 -0.0155 0.0187" quat="0 -0.707107 0.707107 0" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
+          <geom type="mesh" class="visual" pos="-0.065085 0.012 0.0182" quat="0 1 0 0" mesh="upper_arm_so101_v1" material="upper_arm_so101_v1_material"/>
+          <body name="lower_arm" pos="-0.11257 -0.028 0" quat="0.707107 0 0 0.707107">
+            <joint axis="0 0 1" name="elbow_flex" type="hinge" range="-1.69 1.69" class="sts3215"/>
+            <inertial pos="-0.0980701 0.00324376 0.0182831" mass="0.104" fullinertia="2.87438e-05 0.000159844 0.00014529 7.41152e-06 1.26409e-06 -4.90188e-08"/>
+            <geom type="mesh" class="visual" pos="-0.0648499 -0.032 0.0182" quat="0 1 0 0" mesh="under_arm_so101_v1" material="under_arm_so101_v1_material"/>
+            <geom type="mesh" class="visual" pos="-0.0648499 -0.032 0.018" quat="0 -1 0 0" mesh="motor_holder_so101_wrist_v1" material="motor_holder_so101_wrist_v1_material"/>
+            <geom type="mesh" class="visual" pos="-0.1224 0.0052 0.0187" quat="0 0 1 0" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
+            <body name="wrist" pos="-0.1349 0.0052 0" quat="0.707107 0 0 -0.707107">
+              <joint axis="0 0 1" name="wrist_flex" type="hinge" range="-1.65806 1.65806" class="sts3215"/>
+              <inertial pos="-0.000103312 -0.0386143 0.0281156" mass="0.079" fullinertia="3.68263e-05 2.5391e-05 2.1e-05 1.7893e-08 -5.28128e-08 3.6412e-06"/>
+              <geom type="mesh" class="visual" pos="0 -0.0424 0.0306" quat="0.5 0.5 0.5 -0.5" mesh="sts3215_03a_no_horn_v1" material="sts3215_03a_no_horn_v1_material"/>
+              <geom type="mesh" class="visual" pos="0 -0.028 0.0181" quat="0.5 -0.5 -0.5 -0.5" mesh="wrist_roll_pitch_so101_v2" material="wrist_roll_pitch_so101_v2_material"/>
+              <body name="gripper" pos="0 -0.0611 0.0181" quat="0.0172091 -0.0172091 0.706897 0.706897">
+                <joint axis="0 0 1" name="wrist_roll" type="hinge" range="-2.74385 2.84121" class="sts3215"/>
+                <inertial pos="0.000213627 0.000245138 -0.025187" mass="0.087" fullinertia="2.75087e-05 4.33657e-05 3.45059e-05 -3.35241e-07 -5.7352e-06 -5.17847e-08"/>
+                <geom type="mesh" class="visual" pos="0.0077 0.0001 -0.0234" quat="0.707107 -0.707107 0 0" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
+                <geom type="mesh" class="visual" pos="0 -0.000218214 0.000949706" quat="0 1 0 0" mesh="wrist_roll_follower_so101_v1" material="wrist_roll_follower_so101_v1_material"/>
+                <!-- fixed jaw collision (the static half of the gripper) — needed so the
+                     cube can be pinched between this and the moving jaw. -->
+                <geom type="mesh" class="collision" pos="0 -0.000218214 0.000949706" quat="0 1 0 0" mesh="wrist_roll_follower_so101_v1"/>
+                <!-- Grasp/IK reference. Mirrors the SO101 'gripperframe' (the designed TCP)
+                     so local z = the jaw approach axis; the skill aligns it to world -z.
+                     TUNE pos on epyc against live FK. -->
+                <site name="pinch" pos="0.006 -0.000218 -0.085" quat="0.707107 0 0.707107 0" type="sphere" group="5" size="0.005" rgba="0.9 0.9 0.9 1"/>
+                <body name="moving_jaw_so101_v1" pos="0.0202 0.0188 -0.0234" quat="0.707107 0.707107 0 0">
+                  <joint axis="0 0 1" name="gripper" type="hinge" range="-0.17453 1.74533" class="sts3215"/>
+                  <inertial pos="-0.00157495 -0.0300244 0.0192755" mass="0.012" fullinertia="6.61427e-06 1.89032e-06 5.28738e-06 -3.19807e-07 -5.90717e-09 -1.09945e-07"/>
+                  <geom type="mesh" class="visual" pos="0 0 0.0189" quat="1 0 0 0" mesh="moving_jaw_so101_v1" material="moving_jaw_so101_v1_material"/>
+                  <geom type="mesh" class="collision" pos="0 0 0.0189" quat="1 0 0 0" mesh="moving_jaw_so101_v1" material="moving_jaw_so101_v1_material"/>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <position class="sts3215" name="shoulder_pan" joint="shoulder_pan" forcerange="-3.35 3.35" ctrlrange="-1.91986 1.91986"/>
+    <position class="sts3215" name="shoulder_lift" joint="shoulder_lift" forcerange="-3.35 3.35" ctrlrange="-1.74533 1.74533"/>
+    <position class="sts3215" name="elbow_flex" joint="elbow_flex" forcerange="-3.35 3.35" ctrlrange="-1.69 1.69"/>
+    <position class="sts3215" name="wrist_flex" joint="wrist_flex" forcerange="-3.35 3.35" ctrlrange="-1.65806 1.65806"/>
+    <position class="sts3215" name="wrist_roll" joint="wrist_roll" forcerange="-3.35 3.35" ctrlrange="-2.74385 2.84121"/>
+    <position class="sts3215" name="gripper" joint="gripper" forcerange="-3.35 3.35" ctrlrange="-0.17453 1.74533"/>
+  </actuator>
+
+  <!-- Grasp weld: SO-101's small single rotating jaw can't form a stable top-down
+       rigid grasp on the 24mm cube (the fixed jaw plows the cube on descent). The
+       sim instead attaches the cube to the gripper on gripper-close and releases it
+       on open. This is toggled at runtime by mujoco_sim's env-gated GraspWeld
+       (GRASP_WELD=1); it starts inactive so nothing is welded until a grasp. -->
+  <equality>
+    <weld name="grasp_weld" body1="gripper" body2="red_cube" active="false"/>
+  </equality>
+
+  <!-- Let the open jaw pass through the cube during the vertical descent instead of
+       plowing it sideways, so the cube stays centered and the weld latches it cleanly.
+       The cube<->floor contact pair is intentionally kept (not excluded) so it still
+       rests on the table and drops onto the plate on release. -->
+  <contact>
+    <exclude body1="gripper" body2="red_cube"/>
+    <exclude body1="moving_jaw_so101_v1" body2="red_cube"/>
+  </contact>
+
+  <!-- Home: cube(7) + arm(5) + gripper(1) = nq 13. Arm HOME + gripper open;
+       TUNE the arm pose + gripper open/closed on epyc. -->
+  <keyframe>
+    <key name="home"
+         qpos="0.22 0.0 0.02 1 0 0 0
+               0.0 -1.0 1.0 0.8 0.0
+               1.0"
+         ctrl="0.0 -1.0 1.0 0.8 0.0 1.0"/>
+  </keyframe>
+</mujoco>

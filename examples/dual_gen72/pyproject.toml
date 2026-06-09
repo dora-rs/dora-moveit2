@@ -1,0 +1,14 @@
+[project]
+name = "dual-gen72-demo"
+version = "0.1.0"
+description = "Dual GEN72 arm demo — dora-moveit dual-arm coordination example"
+requires-python = ">=3.9"
+dependencies = ["dora-moveit"]
+
+[build-system]
+requires = ["setuptools >= 64.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dual_gen72_demo*"]

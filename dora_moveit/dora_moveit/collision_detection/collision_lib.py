@@ -513,17 +513,60 @@ class CollisionChecker:
         if check_self:
             result = self.check_robot_self_collision(link_transforms)
             if result.in_collision:
-                print(f"[Collision] Self-collision detected: {result.link1} <-> {result.link2}")
+                print(f"[Collision] Self-collision detected: {result.object_a} <-> {result.object_b}")
                 return False, result
 
         if check_environment:
             result = self.check_robot_environment_collision(link_transforms)
             if result.in_collision:
-                print(f"[Collision] Environment collision: {result.link1} <-> {result.object_name}, penetration={result.penetration_depth:.4f}m")
+                print(f"[Collision] Environment collision: {result.object_a} <-> {result.object_b}, penetration={result.penetration_depth:.4f}m")
                 return False, result
 
         return True, None
-    
+
+    def check_inter_arm_collision(
+        self,
+        left_links: List[RobotLink],
+        left_transforms: Dict[str, np.ndarray],
+        right_links: List[RobotLink],
+        right_transforms: Dict[str, np.ndarray],
+    ) -> CollisionResult:
+        """
+        Check for collision between two robot arms.
+
+        Checks all left_link × right_link pairs, skipping pairs where
+        both links are at index 0 (base links adjacent to mount).
+
+        Args:
+            left_links: Robot links for the left arm
+            left_transforms: Link name → position for the left arm
+            right_links: Robot links for the right arm
+            right_transforms: Link name → position for the right arm
+
+        Returns:
+            CollisionResult with first collision found, or no collision
+        """
+        for i, left_link in enumerate(left_links):
+            if left_link.name not in left_transforms:
+                continue
+            for j, right_link in enumerate(right_links):
+                if right_link.name not in right_transforms:
+                    continue
+                # Skip base-to-base pair (mounted, can't collide)
+                if i == 0 and j == 0:
+                    continue
+
+                obj_left = left_link.collision_geometry
+                obj_right = right_link.collision_geometry
+                obj_left.pose[:3] = left_transforms[left_link.name][:3]
+                obj_right.pose[:3] = right_transforms[right_link.name][:3]
+
+                result = self.check_collision(obj_left, obj_right)
+                if result.in_collision:
+                    return result
+
+        return CollisionResult(in_collision=False)
+
     def get_minimum_distance(
         self, 
         link_transforms: Dict[str, np.ndarray]

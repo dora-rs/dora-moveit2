@@ -44,6 +44,7 @@ from dora_moveit.collision_detection.collision_lib import (
     create_robot_link
 )
 from dora_moveit.config import load_config
+from dora_moveit.config import is_dual_arm
 
 
 class PlannerType(Enum):
@@ -139,7 +140,15 @@ class OMPLPlanner:
         
         # Setup robot collision model
         self._setup_robot()
-        
+
+        # Dual-arm support
+        self._is_dual = is_dual_arm(self.config)
+        if self._is_dual:
+            self._dual_num_joints = self.num_joints * len(self.config.ARM_CHAINS)
+            self._dual_lower = np.tile(self.joint_limits_lower, len(self.config.ARM_CHAINS))
+            self._dual_upper = np.tile(self.joint_limits_upper, len(self.config.ARM_CHAINS))
+            self._setup_dual_robot()
+
         # Statistics
         self.collision_checks = 0
         
@@ -150,7 +159,22 @@ class OMPLPlanner:
             obj_type = CollisionObjectType.CYLINDER if geom_type == "cylinder" else CollisionObjectType.SPHERE
             links.append(create_robot_link(f"link{i}", obj_type, np.array(dims), i))
         self.collision_checker.set_robot_links(links)
-        
+
+    def _setup_dual_robot(self):
+        """Set up collision models for both arms in dual-arm mode"""
+        self._arm_links = {}
+        for chain_name in self.config.ARM_CHAINS:
+            chain_geom = self.config.COLLISION_GEOMETRY_PER_CHAIN.get(
+                chain_name, self.config.COLLISION_GEOMETRY
+            )
+            links = []
+            for i, (geom_type, dims) in enumerate(chain_geom):
+                obj_type = CollisionObjectType.CYLINDER if geom_type == "cylinder" else CollisionObjectType.SPHERE
+                links.append(create_robot_link(
+                    f"{chain_name}_link{i}", obj_type, np.array(dims), i
+                ))
+            self._arm_links[chain_name] = links
+
     def add_obstacle(self, obj: CollisionObject):
         """Add obstacle to planning scene"""
         self.collision_checker.add_environment_object(obj)
@@ -196,8 +220,10 @@ class OMPLPlanner:
         
         return True
     
-    def sample_random_config(self) -> np.ndarray:
+    def sample_random_config(self, dual_mode: bool = False) -> np.ndarray:
         """Sample a random configuration within joint limits"""
+        if dual_mode and self._is_dual:
+            return np.random.uniform(self._dual_lower, self._dual_upper)
         return np.random.uniform(self.joint_limits_lower, self.joint_limits_upper)
     
     def nearest_neighbor(self, nodes: List[TreeNode], config: np.ndarray) -> int:
@@ -508,7 +534,17 @@ class PlannerOperator:
         goal_config = np.array(request_data["goal"])
         planner_type = PlannerType(request_data.get("planner", "rrt_connect"))
         max_time = request_data.get("max_time", 5.0)
-        
+        dual_mode = request_data.get("mode") == "dual_arm"
+
+        # In dual-arm mode, temporarily adjust planner dimensions
+        if dual_mode and self.planner._is_dual:
+            orig_num_joints = self.planner.num_joints
+            orig_lower = self.planner.joint_limits_lower
+            orig_upper = self.planner.joint_limits_upper
+            self.planner.num_joints = self.planner._dual_num_joints
+            self.planner.joint_limits_lower = self.planner._dual_lower
+            self.planner.joint_limits_upper = self.planner._dual_upper
+
         request = PlanRequest(
             start_config=start_config,
             goal_config=goal_config,
@@ -521,7 +557,13 @@ class PlannerOperator:
         print(f"  Goal:  {goal_config[:3]}...")
         
         result = self.planner.plan(request)
-        
+
+        # Restore single-arm dimensions
+        if dual_mode and self.planner._is_dual:
+            self.planner.num_joints = orig_num_joints
+            self.planner.joint_limits_lower = orig_lower
+            self.planner.joint_limits_upper = orig_upper
+
         status = {
             "plan_id": self.plan_count,
             "success": result.success,
@@ -627,12 +669,13 @@ def main():
                     if trajectory:
                         # Flatten trajectory for transmission
                         traj_flat = np.array([q for q in trajectory]).flatten()
+                        num_joints_out = len(trajectory[0]) if trajectory else planner_op.planner.num_joints
                         node.send_output(
                             "trajectory",
                             pa.array(traj_flat, type=pa.float32()),
                             metadata={
                                 "num_waypoints": len(trajectory),
-                                "num_joints": planner_op.planner.num_joints
+                                "num_joints": num_joints_out
                             }
                         )
 
