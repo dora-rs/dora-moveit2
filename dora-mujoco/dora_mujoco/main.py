@@ -210,6 +210,11 @@ class GraspWeld:
         self.close_ctrl = float(os.getenv("GRASP_CLOSE_CTRL", "-0.12"))
         self.open_ctrl = float(os.getenv("GRASP_OPEN_CTRL", "1.5"))
         self.proximity = float(os.getenv("GRASP_PROXIMITY", "0.12"))
+        # GRASP_SNAP_AXIAL=1: on latch, snap the object onto the gripper's approach axis
+        # (zero the two lateral components of the captured relative offset, keep the axial
+        # one). Use when the arm grasps slightly off-centre and that lateral error would
+        # otherwise be frozen into the carry, throwing off the place (e.g. ur5e ~8 cm).
+        self.snap_axial = os.getenv("GRASP_SNAP_AXIAL", "0") == "1"
         # midpoint decides closed vs open regardless of which extreme is "closed"
         self._mid = 0.5 * (self.close_ctrl + self.open_ctrl)
         self._close_is_low = self.close_ctrl < self.open_ctrl
@@ -251,6 +256,14 @@ class GraspWeld:
                 p2 = self.data.xpos[self.b2]
                 q2 = self.data.xquat[self.b2]
                 self._rel_pos = R1.T @ (p2 - p1)
+                if self.snap_axial:
+                    # keep only the gripper's approach axis (largest |component|), zero the
+                    # lateral offset so the object is held on the gripper centreline (at the
+                    # TCP) instead of wherever an off-centre grasp happened to clamp it.
+                    axis = int(np.argmax(np.abs(self._rel_pos)))
+                    snapped = np.zeros(3)
+                    snapped[axis] = self._rel_pos[axis]
+                    self._rel_pos = snapped
                 self._rel_quat = np.zeros(4)
                 qneg = np.array([q1[0], -q1[1], -q1[2], -q1[3]])
                 mujoco.mju_mulQuat(self._rel_quat, qneg, q2)
