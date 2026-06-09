@@ -427,9 +427,16 @@ class MuJoCoSimulator:
                 n = min(len(self.target_q), self.model.nu)
                 self.data.ctrl[:n] = self.target_q[:n]
 
-        # Virtual spring on freejoint yaw to keep car facing straight
-        # Disabled in NAV_MODE (dora-nav lateral controller handles path following)
-        if not self.nav_mode and self.model.njnt > 0 and self.model.jnt_type[0] == 0:
+        # Virtual spring on freejoint yaw to keep a mobile CAR BASE facing straight.
+        # Disabled in NAV_MODE (dora-nav lateral controller handles path following).
+        # Set DISABLE_BASE_SPRING=1 when the first freejoint is a LIGHT free object that
+        # the spring would destabilize: e.g. the ur5e scene's free ball, where -2000*yaw
+        # explodes its rotational DOF ("Nan/Inf/huge value in QACC at DOF 3") so MuJoCo
+        # auto-resets the whole sim to qpos0 every few ms — silently pinning the arm at
+        # zero config so it never reaches the object. (The so101/rebot cube/box sit at
+        # y=0 with ~zero spring force, so they leave the spring on.)
+        if (os.getenv("DISABLE_BASE_SPRING", "0") != "1"
+                and not self.nav_mode and self.model.njnt > 0 and self.model.jnt_type[0] == 0):
             # Yaw spring: extract yaw from quaternion (qpos[3:7])
             qw, qx, qy, qz = self.data.qpos[3], self.data.qpos[4], self.data.qpos[5], self.data.qpos[6]
             yaw = 2.0 * np.arctan2(qw * qz + qx * qy, 1.0 - 2.0 * (qy * qy + qz * qz))
