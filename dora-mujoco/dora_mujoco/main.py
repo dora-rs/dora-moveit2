@@ -168,6 +168,93 @@ class IMUSensor:
                            float(body_angvel[0]), float(body_angvel[1]), float(body_angvel[2]))
 
 
+class GraspWeld:
+    """Generic, opt-in 'attach object on gripper close' for sim grasping.
+
+    Some grippers (e.g. a small single rotating jaw) can't form a stable top-down
+    rigid grasp in MuJoCo — the jaw plows the object instead of clamping it. When a
+    model declares an (initially inactive) weld equality, enabling GRASP_WELD=1 lets
+    this helper latch that weld the moment the gripper actuator is commanded closed
+    and the welded bodies are within reach, and release it on open. The latch freezes
+    the *current* relative pose, so the object sticks wherever it sits at close time.
+
+    All robot-specifics come from env (so the sim node stays generic):
+      GRASP_WELD=1                enable
+      GRASP_WELD_EQ=grasp_weld    name of the <weld> equality in the model
+      GRASP_CTRL_INDEX=5          actuator index of the gripper
+      GRASP_CLOSE_CTRL=-0.12      gripper ctrl value that means "closed"
+      GRASP_OPEN_CTRL=1.5         gripper ctrl value that means "open"
+      GRASP_PROXIMITY=0.12        max body1<->body2 distance (m) to allow latching
+    """
+
+    def __init__(self, model, data):
+        self.model = model
+        self.data = data
+        self.enabled = os.getenv("GRASP_WELD", "0") == "1"
+        if not self.enabled:
+            return
+        eq_name = os.getenv("GRASP_WELD_EQ", "grasp_weld")
+        self.eq_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_EQUALITY, eq_name)
+        if self.eq_id < 0:
+            print(f"  [GraspWeld] WARNING: equality '{eq_name}' not in model — disabled")
+            self.enabled = False
+            return
+        self.grip_idx = int(os.getenv("GRASP_CTRL_INDEX", str(max(0, model.nu - 1))))
+        self.close_ctrl = float(os.getenv("GRASP_CLOSE_CTRL", "-0.12"))
+        self.open_ctrl = float(os.getenv("GRASP_OPEN_CTRL", "1.5"))
+        self.proximity = float(os.getenv("GRASP_PROXIMITY", "0.12"))
+        # midpoint decides closed vs open regardless of which extreme is "closed"
+        self._mid = 0.5 * (self.close_ctrl + self.open_ctrl)
+        self._close_is_low = self.close_ctrl < self.open_ctrl
+        # weld bodies (eq_obj1/2 are body ids for a weld)
+        self.b1 = int(model.eq_obj1id[self.eq_id])
+        self.b2 = int(model.eq_obj2id[self.eq_id])
+        self.active = False
+        print(f"  [GraspWeld] enabled: eq='{eq_name}' grip_ctrl[{self.grip_idx}] "
+              f"close={self.close_ctrl} open={self.open_ctrl} prox={self.proximity}m "
+              f"bodies=({self.b1},{self.b2})")
+
+    def _set_active(self, on: bool):
+        val = 1 if on else 0
+        # MuJoCo moved runtime toggling from model.eq_active to data.eq_active
+        if hasattr(self.data, "eq_active"):
+            self.data.eq_active[self.eq_id] = val
+        else:  # older MuJoCo
+            self.model.eq_active[self.eq_id] = val
+        self.active = on
+
+    def _commanded_closed(self) -> bool:
+        c = self.data.ctrl[self.grip_idx]
+        return c <= self._mid if self._close_is_low else c >= self._mid
+
+    def update(self):
+        if not self.enabled:
+            return
+        closed = self._commanded_closed()
+        if closed and not self.active:
+            d = float(np.linalg.norm(self.data.xpos[self.b1] - self.data.xpos[self.b2]))
+            if d <= self.proximity:
+                # Freeze the current relative pose of body2 in body1's frame into the
+                # weld's relpose so the object holds where it is (no snap to a default).
+                p1, R1 = self.data.xpos[self.b1], self.data.xmat[self.b1].reshape(3, 3)
+                p2, q2 = self.data.xpos[self.b2], self.data.xquat[self.b2]
+                q1 = self.data.xquat[self.b1]
+                relpos = R1.T @ (p2 - p1)
+                relquat = np.zeros(4)
+                qneg = np.array([q1[0], -q1[1], -q1[2], -q1[3]])
+                mujoco.mju_mulQuat(relquat, qneg, q2)
+                self.model.eq_data[self.eq_id, 0:3] = 0.0          # anchor
+                self.model.eq_data[self.eq_id, 3:6] = relpos       # relpose position
+                self.model.eq_data[self.eq_id, 6:10] = relquat     # relpose quaternion
+                if self.model.eq_data.shape[1] > 10:
+                    self.model.eq_data[self.eq_id, 10] = 1.0        # torquescale
+                self._set_active(True)
+                print(f"  [GraspWeld] latched (dist={d*1000:.0f}mm)")
+        elif (not closed) and self.active:
+            self._set_active(False)
+            print("  [GraspWeld] released")
+
+
 class MuJoCoSimulator:
     """MuJoCo simulator for Dora."""
 
@@ -264,6 +351,9 @@ class MuJoCoSimulator:
                 ctrl_range = self.model.actuator_ctrlrange[i]
                 print(f"  [{i}] {actuator_name or f'actuator_{i}'} -> joint: {joint_name} | range: [{ctrl_range[0]:.2f}, {ctrl_range[1]:.2f}]")
             
+        # Optional sim-grasp weld (no-op unless GRASP_WELD=1 and the model declares it)
+        self.grasp_weld = GraspWeld(self.model, self.data)
+
         # Initialize state data
         self._update_state_data()
         return True
@@ -328,6 +418,10 @@ class MuJoCoSimulator:
             yaw = 2.0 * np.arctan2(qw * qz + qx * qy, 1.0 - 2.0 * (qy * qy + qz * qz))
             self.data.qfrc_applied[5] = -2000.0 * yaw   # rz: strong spring to hold heading
             self.data.qfrc_applied[1] = -200.0 * self.data.qpos[1]  # ty: gentle spring to center Y
+
+        # Latch/release the optional grasp weld from the commanded gripper ctrl
+        if getattr(self, "grasp_weld", None) is not None:
+            self.grasp_weld.update()
 
         mujoco.mj_step(self.model, self.data)
         self._update_state_data()

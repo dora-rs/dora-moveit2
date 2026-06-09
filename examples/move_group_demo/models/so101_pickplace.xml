@@ -67,7 +67,7 @@
 
     <!-- ===== Free object FIRST so its freejoint owns qpos[0:7] ===== -->
     <!-- Small red cube (half 0.012 = 24mm) within the small SO-101 reach. -->
-    <body name="red_cube" pos="0.15 0.0 0.02">
+    <body name="red_cube" pos="0.17 0.0 0.02">
       <freejoint name="cube_joint"/>
       <inertial pos="0 0 0" mass="0.02" diaginertia="0.0008 0.0008 0.0008"/>
       <geom condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001"
@@ -141,11 +141,29 @@
     <position class="sts3215" name="gripper" joint="gripper" forcerange="-3.35 3.35" ctrlrange="-0.17453 1.74533"/>
   </actuator>
 
+  <!-- Grasp weld: SO-101's small single rotating jaw can't form a stable top-down
+       rigid grasp on the 24mm cube (the fixed jaw plows the cube on descent). The
+       sim instead attaches the cube to the gripper on gripper-close and releases it
+       on open. This is toggled at runtime by mujoco_sim's env-gated GraspWeld
+       (GRASP_WELD=1); it starts inactive so nothing is welded until a grasp. -->
+  <equality>
+    <weld name="grasp_weld" body1="gripper" body2="red_cube" active="false"/>
+  </equality>
+
+  <!-- Let the open jaw pass through the cube during the vertical descent instead of
+       plowing it sideways, so the cube stays centered and the weld latches it cleanly.
+       The cube<->floor contact pair is intentionally kept (not excluded) so it still
+       rests on the table and drops onto the plate on release. -->
+  <contact>
+    <exclude body1="gripper" body2="red_cube"/>
+    <exclude body1="moving_jaw_so101_v1" body2="red_cube"/>
+  </contact>
+
   <!-- Home: cube(7) + arm(5) + gripper(1) = nq 13. Arm HOME + gripper open;
        TUNE the arm pose + gripper open/closed on epyc. -->
   <keyframe>
     <key name="home"
-         qpos="0.15 0.0 0.02 1 0 0 0
+         qpos="0.17 0.0 0.02 1 0 0 0
                0.0 -1.0 1.0 0.8 0.0
                1.0"
          ctrl="0.0 -1.0 1.0 0.8 0.0 1.0"/>
