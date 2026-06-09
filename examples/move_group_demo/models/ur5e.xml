@@ -313,6 +313,13 @@
     <exclude body1="gripper_base" body2="right_spring_link"/>
     <exclude body1="right_coupler" body2="right_follower"/>
     <exclude body1="left_coupler" body2="left_follower"/>
+    <!-- Sim grasp weld (GRASP_WELD): the ball is driven kinematically while held, so
+         exclude it from the finger/palm contacts that would otherwise fight the attach. -->
+    <exclude body1="gripper_base" body2="red_ball"/>
+    <exclude body1="left_silicone_pad" body2="red_ball"/>
+    <exclude body1="right_silicone_pad" body2="red_ball"/>
+    <exclude body1="left_pad" body2="red_ball"/>
+    <exclude body1="right_pad" body2="red_ball"/>
   </contact>
 
   <!-- Gripper tendon: synchronize left and right driver joints -->
@@ -329,6 +336,12 @@
     <connect anchor="0 0 0" body1="left_follower" body2="left_coupler" solimp="0.95 0.99 0.001" solref="0.005 1"/>
     <joint joint1="right_driver_joint" joint2="left_driver_joint" polycoef="0 1 0 0 0" solimp="0.95 0.99 0.001"
       solref="0.005 1"/>
+    <!-- Sim grasp weld: NOT activated as a constraint — GraspWeld (GRASP_WELD=1) uses this
+         only to name the two bodies (palm + ball) and then attaches them KINEMATICALLY on
+         gripper close. The Robotiq 2F-85 can't form a stable rigid grasp on a free sphere
+         in MuJoCo (the ball squirts out on lift), so the kinematic attach makes the carry
+         reliable. body1 = rigid palm (gripper_base), NOT a moving finger. -->
+    <weld name="grasp_weld" body1="gripper_base" body2="red_ball" active="false"/>
   </equality>
 
   <actuator>
